@@ -22,8 +22,14 @@
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--text);
     font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  body { padding: 0 16px calc(var(--nav-h) + 90px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto;
-    -webkit-user-select: none; user-select: none; overscroll-behavior-y: contain; }
+  /* The screen itself never scrolls; only #scroller does. This keeps the bottom bar fixed on iPhone
+     no matter how long or short a tab's content is. */
+  html, body { height: 100%; overflow: hidden; }
+  body { -webkit-user-select: none; user-select: none; }
+  #scroller { position: fixed; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto;
+    -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+  .page { max-width: 560px; margin: 0 auto; min-height: 100%;
+    padding: 0 16px calc(var(--nav-h) + 90px + env(safe-area-inset-bottom)); }
   input { -webkit-user-select: text; user-select: text; }
   button { font-family: inherit; cursor: pointer; }
 
@@ -157,8 +163,10 @@
 </style>
 </head>
 <body>
+<div id="scroller"><div class="page">
 <header id="header"></header>
 <main id="main"><div class="msg">Loading…</div></main>
+</div></div>
 
 <div class="timer" id="timer">
   <div class="timer-menu" id="timerMenu">
@@ -680,6 +688,8 @@
   }
   function drawTimer() { const b = document.getElementById('timerBtn'); b.textContent = '⏱ Rest'; b.className = 'timer-btn'; }
 
+  function toTop() { document.getElementById('scroller').scrollTop = 0; }
+
   // ---------- taps ----------
   document.addEventListener('click', async ev => {
     const b = ev.target.closest('button');
@@ -692,12 +702,12 @@
       return;
     }
     if (b.dataset.rest) { menu.classList.remove('open'); startTimer(+b.dataset.rest); return; }
-    if (b.dataset.view) { view = b.dataset.view; store('gymView', view); if (view !== 'progress') detail = null; render(); window.scrollTo(0, 0); return; }
+    if (b.dataset.view) { view = b.dataset.view; store('gymView', view); if (view !== 'progress') detail = null; render(); toTop(); return; }
     if (b.dataset.act === 'refresh') { load(true); return; }
-    if (b.dataset.day) { day = b.dataset.day; render(); window.scrollTo(0, 0); return; }
+    if (b.dataset.day) { day = b.dataset.day; render(); toTop(); return; }
     if (b.dataset.filter) { progFilter = b.dataset.filter; render(); return; }
-    if (b.dataset.detail) { detail = b.dataset.detail; render(); window.scrollTo(0, 0); return; }
-    if (b.dataset.act === 'back') { detail = null; render(); window.scrollTo(0, 0); return; }
+    if (b.dataset.detail) { detail = b.dataset.detail; render(); toTop(); return; }
+    if (b.dataset.act === 'back') { detail = null; render(); toTop(); return; }
     if (b.dataset.metric) { metric = b.dataset.metric; render(); return; }
     if (b.dataset.hday) { openDays[b.dataset.hday] = !openDays[b.dataset.hday]; render(); return; }
 
