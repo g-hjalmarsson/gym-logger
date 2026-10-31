@@ -22,15 +22,9 @@
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--text);
     font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  /* The screen itself never scrolls; only #scroller does. This keeps the bottom bar fixed on iPhone
-     no matter how long or short a tab's content is. */
-  /* body is pinned too, so iPhone can't "rubber band" the whole app (which dragged the bottom bar along). */
-  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
-  body { position: fixed; top: 0; left: 0; right: 0; bottom: 0; -webkit-user-select: none; user-select: none; }
-  #scroller { position: fixed; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto;
-    -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
-  /* Always clearly taller than the screen, so even a short tab (like History with few workouts)
-     scrolls inside #scroller instead of moving the app. Uses screen height, which iPhone respects. */
+  /* The whole page scrolls (iPhone places the bottom bar correctly only when the page can scroll),
+     and every tab is always taller than the screen so even short tabs like History can scroll. */
+  body { -webkit-user-select: none; user-select: none; overscroll-behavior-y: contain; }
   .page { max-width: 560px; margin: 0 auto; min-height: calc(100vh + 80px); min-height: calc(100lvh + 80px);
     padding: 0 16px calc(var(--nav-h) + 90px + env(safe-area-inset-bottom)); }
   input { -webkit-user-select: text; user-select: text; }
@@ -691,10 +685,7 @@
   }
   function drawTimer() { const b = document.getElementById('timerBtn'); b.textContent = '⏱ Rest'; b.className = 'timer-btn'; }
 
-  // A drag that starts outside the content area (e.g. on the bottom bar) must not move the app.
-  document.addEventListener('touchmove', ev => { if (!ev.target.closest('#scroller')) ev.preventDefault(); }, { passive: false });
-
-  function toTop() { document.getElementById('scroller').scrollTop = 0; }
+  function toTop() { window.scrollTo(0, 0); }
 
   // ---------- taps ----------
   document.addEventListener('click', async ev => {

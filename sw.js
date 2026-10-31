@@ -1,6 +1,6 @@
 // Keeps the app's own files on the phone so it opens even with no signal.
 // Spreadsheet requests are never cached.
-const CACHE = 'gym-logger-v5';
+const CACHE = 'gym-logger-v6';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
