@@ -130,7 +130,7 @@
   .hitem .v { color: var(--muted); white-space: nowrap; }
 
   /* bottom nav */
-  nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; background: rgba(15,17,21,.96);
+  nav { position: fixed; left: 0; right: 0; bottom: calc(0px - var(--fix, 0px)); z-index: 8; background: rgba(15,17,21,.96);
     border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
   nav .inner { display: flex; max-width: 560px; margin: 0 auto; height: var(--nav-h); }
   nav button { flex: 1; background: none; border: 0; color: var(--muted); font-size: 11px; font-weight: 600;
@@ -139,7 +139,7 @@
   nav svg { width: 24px; height: 24px; }
 
   /* rest timer */
-  .timer { position: fixed; right: 16px; bottom: calc(var(--nav-h) + 14px + env(safe-area-inset-bottom)); z-index: 9;
+  .timer { position: fixed; right: 16px; bottom: calc(var(--nav-h) + 14px + env(safe-area-inset-bottom) - var(--fix, 0px)); z-index: 9;
     display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
   .timer-btn { border: 0; border-radius: 999px; padding: 12px 18px; font-size: 16px; font-weight: 800; color: white;
     background: var(--accent); box-shadow: 0 6px 18px rgba(0,0,0,.45); font-variant-numeric: tabular-nums; }
@@ -152,7 +152,7 @@
   .timer-menu button { border: 1px solid var(--line); background: #232731; color: var(--text); border-radius: 10px;
     padding: 10px 14px; font-size: 15px; font-weight: 700; }
 
-  .toast { position: fixed; left: 16px; right: 16px; bottom: calc(var(--nav-h) + 76px + env(safe-area-inset-bottom)); max-width: 528px; margin: 0 auto;
+  .toast { position: fixed; left: 16px; right: 16px; bottom: calc(var(--nav-h) + 76px + env(safe-area-inset-bottom) - var(--fix, 0px)); max-width: 528px; margin: 0 auto;
     background: var(--warn); color: white; padding: 12px 14px; border-radius: 12px; font-weight: 600; display: none; z-index: 10; }
   .toast.good { background: var(--good); }
   input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -555,7 +555,8 @@
     <div class="tiles">
       ${tile('Workouts', dates.length, '', dates.length ? `since ${shortDate(dates[0])}` : '')}
       ${tile('Total lifted', fmtBig(hist.reduce((s, h) => s + volume(h), 0)), 'kg', '')}
-    </div>`;
+    </div>
+    <div class="sub" style="font-size:11px;margin-top:24px;text-align:center;opacity:.6">${screenInfo()}</div>`;
     document.getElementById('main').innerHTML = html;
   }
 
@@ -781,7 +782,34 @@
     flushQueue();
   }
   window.addEventListener('online', flushQueue);
+  // ---------- bottom bar position on iPhone ----------
+  // On some iPhones, an app opened from the home screen gets a page that ends above the real bottom
+  // of the screen, so a bar pinned to "the bottom of the page" floats too high. Measure the gap and
+  // move the bar (and the timer/toast above it) down by exactly that much.
+  function isHomeScreenApp() { return navigator.standalone === true || matchMedia('(display-mode: standalone)').matches; }
+  function realScreenHeight() {
+    const land = matchMedia('(orientation: landscape)').matches;
+    return land ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
+  }
+  function placeBar() {
+    let fix = 0;
+    if (isHomeScreenApp()) fix = Math.max(0, realScreenHeight() - document.documentElement.clientHeight);
+    if (fix > 150) fix = 0; // something unexpected (e.g. split screen); don't move it
+    document.documentElement.style.setProperty('--fix', fix + 'px');
+    return fix;
+  }
+  function screenInfo() {
+    const safe = getComputedStyle(document.documentElement);
+    return `Screen ${realScreenHeight()} · page ${document.documentElement.clientHeight} · window ${innerHeight}` +
+      ` · visible ${window.visualViewport ? Math.round(visualViewport.height) : '-'} · shift ${placeBar()}` +
+      ` · ${isHomeScreenApp() ? 'home-screen app' : 'browser'}`;
+  }
+  window.addEventListener('resize', placeBar);
+  window.addEventListener('orientationchange', () => setTimeout(placeBar, 300));
+  placeBar();
+
   document.addEventListener('visibilitychange', () => {
+    placeBar();
     if (document.hidden) return;
     if (timer.end) tickTimer();
     flushQueue();
