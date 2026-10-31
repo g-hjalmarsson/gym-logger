@@ -555,8 +555,7 @@
     <div class="tiles">
       ${tile('Workouts', dates.length, '', dates.length ? `since ${shortDate(dates[0])}` : '')}
       ${tile('Total lifted', fmtBig(hist.reduce((s, h) => s + volume(h), 0)), 'kg', '')}
-    </div>
-    <div class="sub" style="font-size:11px;margin-top:24px;text-align:center;opacity:.6">${screenInfo()}</div>`;
+    </div>`;
     document.getElementById('main').innerHTML = html;
   }
 
@@ -786,29 +785,10 @@
   // An iPhone home-screen app sometimes treats "the bottom of the page" as the full screen and
   // sometimes as a shorter area, so a bar pinned to the bottom jumps. Instead the bar, timer and
   // messages are placed from the TOP of the screen, using the real screen height (--vh).
-  function isHomeScreenApp() { return navigator.standalone === true || matchMedia('(display-mode: standalone)').matches; }
-  function realScreenHeight() {
-    const land = matchMedia('(orientation: landscape)').matches;
-    return land ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
-  }
   function placeBar() {
     const h = window.innerHeight;
     document.documentElement.style.setProperty('--vh', h + 'px');
     return h;
-  }
-  function safeEdges() {
-    const probe = document.createElement('div');
-    probe.style.cssText = 'position:fixed;visibility:hidden;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)';
-    document.body.appendChild(probe);
-    const cs = getComputedStyle(probe), out = [parseFloat(cs.paddingTop) || 0, parseFloat(cs.paddingBottom) || 0];
-    probe.remove(); return out;
-  }
-  function screenInfo() {
-    const [st, sb] = safeEdges(), fix = 'top ' + placeBar(), nav = document.querySelector('nav').getBoundingClientRect();
-    return `Screen ${realScreenHeight()} · page ${document.documentElement.clientHeight} · window ${innerHeight}` +
-      ` · visible ${window.visualViewport ? Math.round(visualViewport.height) : '-'} · shift ${fix}` +
-      ` · safe ${st}/${sb} · bar ${Math.round(nav.top)}-${Math.round(nav.bottom)}` +
-      ` · ${isHomeScreenApp() ? 'home-screen app' : 'browser'}`;
   }
   window.addEventListener('resize', placeBar);
   if (window.visualViewport) visualViewport.addEventListener('resize', placeBar);
