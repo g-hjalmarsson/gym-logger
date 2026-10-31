@@ -798,10 +798,18 @@
     document.documentElement.style.setProperty('--fix', fix + 'px');
     return fix;
   }
+  function safeEdges() {
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;visibility:hidden;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)';
+    document.body.appendChild(probe);
+    const cs = getComputedStyle(probe), out = [parseFloat(cs.paddingTop) || 0, parseFloat(cs.paddingBottom) || 0];
+    probe.remove(); return out;
+  }
   function screenInfo() {
-    const safe = getComputedStyle(document.documentElement);
+    const [st, sb] = safeEdges(), fix = placeBar(), nav = document.querySelector('nav').getBoundingClientRect();
     return `Screen ${realScreenHeight()} · page ${document.documentElement.clientHeight} · window ${innerHeight}` +
-      ` · visible ${window.visualViewport ? Math.round(visualViewport.height) : '-'} · shift ${placeBar()}` +
+      ` · visible ${window.visualViewport ? Math.round(visualViewport.height) : '-'} · shift ${fix}` +
+      ` · safe ${st}/${sb} · bar ${Math.round(nav.top)}-${Math.round(nav.bottom)}` +
       ` · ${isHomeScreenApp() ? 'home-screen app' : 'browser'}`;
   }
   window.addEventListener('resize', placeBar);
