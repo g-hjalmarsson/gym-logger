@@ -155,6 +155,49 @@
   .toast { position: fixed; left: 16px; right: 16px; bottom: auto; top: calc(var(--vh, 100vh) - var(--nav-h) - 76px - env(safe-area-inset-bottom)); transform: translateY(-100%); max-width: 528px; margin: 0 auto;
     background: var(--warn); color: white; padding: 12px 14px; border-radius: 12px; font-weight: 600; display: none; z-index: 10; }
   .toast.good { background: var(--good); }
+  /* sets logged today */
+  .sets { margin: 0 0 10px; }
+  .setrow { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 15px; }
+  .setrow:first-child { border-top: 0; }
+  .setrow .no { width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex: none; }
+  .setrow.queued .no { background: rgba(245,185,66,.22); }
+  .setrow .what { flex: 1; font-weight: 600; }
+  .x { background: none; border: 0; color: var(--muted); font-size: 17px; padding: 4px 8px; }
+  .row.two { grid-template-columns: 1fr 1fr; }
+  .btn.ghost { background: none; border: 1px solid var(--line); color: var(--text); }
+  .btn.wide { display: block; width: 100%; margin-top: 14px; }
+  .link.danger { color: var(--warn); }
+  .link.armed { color: white; background: var(--warn); border-radius: 10px; text-decoration: none; font-weight: 700; }
+
+  /* exercise editor */
+  .l { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; margin: 14px 0 6px; }
+  .text { width: 100%; padding: 11px 12px; border-radius: 12px; border: 1px solid var(--line); background: transparent;
+    color: var(--text); font-size: 16px; font-family: inherit; }
+  .text:focus { outline: none; border-color: var(--accent); }
+  .chips.wrap { flex-wrap: wrap; margin-top: 0; }
+  .erow { display: flex; align-items: center; gap: 4px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 4px 6px 4px 0; margin-top: 8px; }
+  .einfo { flex: 1; min-width: 0; text-align: left; background: none; border: 0; color: var(--text); padding: 8px 12px; }
+  .einfo .pname { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .einfo .pmeta { color: var(--muted); font-size: 13px; }
+  .mv { width: 38px; height: 38px; flex: none; border: 1px solid var(--line); background: #232731; color: var(--text);
+    border-radius: 10px; font-size: 16px; }
+  .mv:disabled { opacity: .3; }
+  .busy { opacity: .55; pointer-events: none; }
+
+  /* history: sets you can tap to change */
+  .hsess { padding: 8px 0 4px; border-top: 1px solid var(--line); }
+  .hsess:first-child { border-top: 0; }
+  .hsess .hname { font-weight: 700; font-size: 15px; }
+  .hset { display: flex; width: 100%; justify-content: space-between; gap: 8px; background: none; border: 0; color: var(--text);
+    text-align: left; padding: 6px 0 6px 10px; font-size: 14px; }
+  .hset .v { color: var(--muted); white-space: nowrap; }
+  .hset .pen { color: var(--muted); font-size: 13px; }
+  .editbox { background: #14171d; border: 1px solid var(--accent); border-radius: 12px; padding: 10px; margin: 4px 0 8px; }
+  .editbox .row:not(.two) { grid-template-columns: 1.25fr 1fr 1fr; gap: 4px; }
+  .editbox .row:not(.two) .stepper button { width: 24px; font-size: 17px; }
+  .editbox .row:not(.two) .stepper input { font-size: 16px; }
   input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   input[type=number] { -moz-appearance: textfield; }
 </style>
@@ -213,7 +256,35 @@
   function shortDate(iso) { const d = dateOf(iso); return isNaN(d) ? iso : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
   function longDate(iso) { return dateOf(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
   function weekStart(iso) { const d = dateOf(iso); const wd = (d.getDay() + 6) % 7; d.setDate(d.getDate() - wd); return isoOf(d); }
-  function volume(e) { return e.weight * e.reps * e.sets; }
+  function volume(e) { return e.weight * e.reps * (e.sets || 1); }
+
+  // Each set is saved as its own row. Older rows can hold several identical sets (Sets > 1).
+  function setList(entries) { const out = []; entries.forEach(e => { for (let i = 0; i < Math.max(1, e.sets || 1); i++) out.push(e); }); return out; }
+  function setsText(entries) {
+    const s = setList(entries); if (!s.length) return '';
+    const sameW = s.every(x => x.weight === s[0].weight), sameR = s.every(x => x.reps === s[0].reps);
+    if (sameW && sameR) return `${fmt(s[0].weight)} kg × ${s[0].reps} × ${s.length} set${s.length > 1 ? 's' : ''}`;
+    if (sameW) return `${fmt(s[0].weight)} kg × ${s.map(x => x.reps).join(', ')} reps`;
+    return s.map(x => `${fmt(x.weight)}×${x.reps}`).join(' · ') + ' kg';
+  }
+  // One "session" = everything done on one exercise on one day. Weight/reps are the top set.
+  function groupSessions(hist) {
+    const map = {}, out = [];
+    hist.forEach(h => {
+      const k = h.date + '|' + h.exercise;
+      if (!map[k]) { map[k] = { date: h.date, exercise: h.exercise, entries: [] }; out.push(map[k]); }
+      map[k].entries.push(h);
+    });
+    out.forEach(s => {
+      const top = s.entries.reduce((a, b) => (b.weight > a.weight || (b.weight === a.weight && b.reps > a.reps)) ? b : a);
+      s.weight = top.weight; s.reps = top.reps;
+      s.sets = s.entries.reduce((n, e) => n + Math.max(1, e.sets || 1), 0);
+      s.est = Math.max(...s.entries.map(e => est(e.weight, e.reps)));
+      s.pr = s.entries.some(e => e.pr);
+      s.notes = s.entries.map(e => e.notes).filter(Boolean).join(' · ');
+    });
+    return out;
+  }
 
   // ---------- secret key (comes from the setup link, kept on this phone) ----------
   (function readKeyFromLink() { const m = location.hash.match(/k=([A-Za-z0-9_-]+)/); if (m) store('gymKey', m[1]); })();
@@ -242,8 +313,8 @@
         const item = queue[0];
         const row = await api('logEntry', { entry: item.entry });
         queue.shift(); store('gymQueue', queue);
-        const l = logged[item.entry.exercise];
-        if (l && l.qid === item.id) { l.row = row; delete l.qid; saveLogged(); }
+        const l = (logged[item.entry.exercise] || []).find(x => x.qid === item.id);
+        if (l) { l.row = row; delete l.qid; saveLogged(); }
       }
     } catch (e) {
       if (e.server) toast('Could not save a waiting entry: ' + e.message);
@@ -268,8 +339,17 @@
   // What you logged today, so it survives closing the app.
   let logged = store('gymLogged') || {};
   if (logged._date !== todayIso()) logged = { _date: todayIso() };
+  // (older app versions kept one entry per exercise instead of a list of sets)
+  Object.keys(logged).forEach(k => { if (k[0] !== '_' && !Array.isArray(logged[k])) logged[k] = [logged[k]]; });
   function saveLogged() { store('gymLogged', logged); }
-  function loggedEntries() { return Object.keys(logged).filter(k => k[0] !== '_').map(k => Object.assign({ exercise: k }, logged[k])); }
+  function loggedEntries() {
+    const out = [];
+    Object.keys(logged).filter(k => k[0] !== '_').forEach(k => logged[k].forEach(l => out.push(Object.assign({ exercise: k }, l))));
+    return out;
+  }
+  let manage = false;          // Workout tab: exercise editor open
+  let editEx = null;           // exercise being edited (index) or 'new'
+  let editRow = null;          // History: row being changed
 
   // Full history = spreadsheet rows + anything logged on this phone that the sheet copy doesn't have yet.
   function allHistory() {
@@ -312,10 +392,16 @@
   }
 
   // Progression suggestion: add reps until REP_TOP, then add weight and drop to REP_RESET.
-  function suggestion(e) {
-    const l = e.last; if (!l || !l.reps) return null;
-    if (l.reps >= REP_TOP) return { weight: l.weight + WEIGHT_STEP, reps: REP_RESET, why: `you hit ${l.reps} reps last time` };
-    return { weight: l.weight, reps: l.reps + 1, why: 'one more rep than last time' };
+  function suggestion(l) {
+    if (!l || !l.reps) return null;
+    const top = setList(l.entries).filter(x => x.weight === l.weight), low = Math.min(...top.map(x => x.reps));
+    if (low >= REP_TOP) return { weight: l.weight + WEIGHT_STEP, reps: REP_RESET, why: `you hit ${low}+ reps last time` };
+    return { weight: l.weight, reps: top[0].reps + 1, why: 'one more rep than last time' };
+  }
+  // Your last session on an exercise before today.
+  function lastSession(name) {
+    const s = groupSessions(allHistory().filter(h => h.exercise === name && h.date !== todayIso()));
+    return s[s.length - 1] || null;
   }
 
   // ---------- drawing: shared ----------
@@ -342,7 +428,7 @@
 
   function render() {
     renderNav();
-    document.getElementById('timer').style.display = (view === 'workout' || timer.end) ? 'flex' : 'none';
+    document.getElementById('timer').style.display = ((view === 'workout' && !manage) || timer.end) ? 'flex' : 'none';
     if (!data) return;
     if (view === 'workout') renderWorkout();
     else if (view === 'progress') renderProgress();
@@ -353,6 +439,7 @@
 
   // ---------- Workout tab ----------
   function renderWorkout() {
+    if (manage) return renderManage();
     const days = daysList();
     if (!days.includes(day)) day = suggestedDay() || days[0];
     const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -366,34 +453,36 @@
     }
     const list = data.exercises.filter(e => e.day === day);
     document.getElementById('main').innerHTML = banner + (list.map((e, i) => workoutCard(e, i)).join('') ||
-      '<div class="msg">No exercises for this day yet. Add them on the Exercises sheet.</div>');
+      '<div class="msg">No exercises for this day yet.</div>') +
+      '<button class="btn ghost wide" data-act="manage">✎ Add or edit exercises</button>';
     document.querySelectorAll('.card[data-i]').forEach(updateHint);
   }
 
   function workoutCard(e, i) {
-    const l = e.last, done = logged[e.name];
+    const done = logged[e.name] || [], l = lastSession(e.name);
     const head = `<div class="top"><div class="name">${esc(e.name)}</div><div class="muscle">${esc(e.muscle)}</div></div>`;
-    if (done) {
-      const waiting = !done.row;
-      return `<div class="card ${waiting ? 'queued' : 'done'}" data-i="${i}">${head}
-        <div class="logged"><div class="check">${waiting ? '⏳' : (done.pr ? '🏆' : '✓')} ${fmt(done.weight)} kg × ${done.reps} × ${done.sets}${waiting ? ' · waiting to send' : (done.pr ? ' · new record!' : '')}</div>
-        <button class="link" data-act="undo">Undo</button></div></div>`;
-    }
-    const lastTxt = l ? `Last (${niceDate(l.date)}): <b>${fmt(l.weight)} kg × ${l.reps} reps × ${l.sets} sets</b>` +
+    const lastTxt = l ? `Last (${niceDate(l.date)}): <b>${setsText(l.entries)}</b>` +
       (l.notes ? ` · ${esc(l.notes)}` : '') : 'First time, no history yet';
-    const s = suggestion(e);
+    const s = done.length ? null : suggestion(l);
     const sugHtml = s ? `<div class="suggest"><span>💡 Try <b>${fmt(s.weight)} kg × ${s.reps}</b> (${s.why})</span>
       <button data-act="apply" data-w="${s.weight}" data-r="${s.reps}">Use</button></div>` : '';
-    const w = l ? l.weight : 0, r = l ? l.reps : 10, st = l ? l.sets : 3;
-    return `<div class="card" data-i="${i}">${head}
-      <div class="last">${lastTxt}</div>${sugHtml}
-      <div class="row">
+    const sets = done.length ? `<div class="sets">${done.map((d, k) => `<div class="setrow ${d.row ? '' : 'queued'}">
+        <span class="no">${k + 1}</span><span class="what">${fmt(d.weight)} kg × ${d.reps}${d.sets > 1 ? ` × ${d.sets} sets` : ''}${d.pr ? ' 🏆' : ''}
+        ${d.row ? '' : '<span class="sub">· waiting to send</span>'}${d.notes ? ` <span class="sub">· ${esc(d.notes)}</span>` : ''}</span>
+        <button class="x" data-act="undo" data-n="${k}" aria-label="Remove set ${k + 1}">✕</button></div>`).join('')}</div>` : '';
+    // Start from the set you just did, otherwise from your first set last time.
+    const prev = done[done.length - 1] || (l ? setList(l.entries)[0] : null);
+    const w = prev ? prev.weight : 0, r = prev ? prev.reps : 10;
+    const target = l ? l.sets : 0;
+    const progress = target ? `${done.length} of ${target} sets` : (done.length ? `${done.length} set${done.length > 1 ? 's' : ''}` : '');
+    return `<div class="card ${done.length ? (done.some(d => !d.row) ? 'queued' : 'done') : ''}" data-i="${i}" data-form="1">${head}
+      <div class="last">${lastTxt}</div>${sugHtml}${sets}
+      <div class="row two">
         ${field('Kg', 'weight', w, WEIGHT_STEP, 'decimal')}
         ${field('Reps', 'reps', r, 1, 'numeric')}
-        ${field('Sets', 'sets', st, 1, 'numeric')}
       </div>
-      <input class="note" data-k="notes" placeholder="Note (optional)" autocomplete="off">
-      <div class="actions"><div class="hint"></div><button class="btn" data-act="log">Done</button></div>
+      <input class="note" data-k="notes" placeholder="Note for this set (optional)" autocomplete="off">
+      <div class="actions"><div class="hint"></div>${progress ? `<span class="sub">${progress}</span>` : ''}<button class="btn" data-act="log">Log set ${done.length + 1}</button></div>
     </div>`;
   }
 
@@ -406,8 +495,9 @@
   }
 
   function readCard(el) {
-    const v = k => parseFloat(String(el.querySelector(`input[data-k="${k}"]`).value).replace(',', '.')) || 0;
-    return { weight: v('weight'), reps: Math.round(v('reps')), sets: Math.round(v('sets')),
+    const v = k => { const i = el.querySelector(`input[data-k="${k}"]`); return i ? parseFloat(String(i.value).replace(',', '.')) || 0 : null; };
+    const sets = v('sets');
+    return { weight: v('weight'), reps: Math.round(v('reps')), sets: sets === null ? 1 : Math.round(sets),
       notes: el.querySelector('input[data-k="notes"]').value.trim() };
   }
   function cardExercise(el) { return data.exercises.filter(x => x.day === day)[+el.dataset.i]; }
@@ -418,17 +508,75 @@
 
   function updateHint(el) {
     const e = cardExercise(el);
-    const h = el.querySelector('.hint'); if (!h || !e || !e.last) return;
-    const c = readCard(el), now = est(c.weight, c.reps), before = est(e.last.weight, e.last.reps), best = bestEst(e.name);
+    const l = e && lastSession(e.name);
+    const h = el.querySelector('.hint'); if (!h || !l) return;
+    const c = readCard(el), now = est(c.weight, c.reps), before = est(l.weight, l.reps), best = bestEst(e.name);
     if (now > best + 0.05) { h.textContent = '🏆 would be a new record'; h.className = 'hint up'; }
     else if (now > before + 0.05) { h.textContent = '↑ stronger than last time'; h.className = 'hint up'; }
     else if (now < before - 0.05) { h.textContent = 'Lighter than last time'; h.className = 'hint'; }
     else { h.textContent = 'Same as last time'; h.className = 'hint'; }
   }
 
+  // ---------- exercise editor (part of the Workout tab) ----------
+  function renderManage() {
+    header('Exercises', 'Add, rename, move or remove');
+    let html = `<button class="back" data-act="manage-done">‹ Back to workout</button>`;
+    html += editEx !== null ? exForm() : `<button class="btn wide" data-act="ex-new">＋ Add exercise</button>`;
+    daysList().forEach(d => {
+      const items = data.exercises.map((e, idx) => [e, idx]).filter(([e]) => e.day === d);
+      html += `<div class="section-title">${esc(d)}</div>` + items.map(([e, idx], k) => `<div class="erow">
+        <button class="einfo" data-ex="${idx}"><div class="pname">${esc(e.name)}</div><div class="pmeta">${esc(e.muscle || ' ')} · tap to edit</div></button>
+        <button class="mv" data-move="-1" data-idx="${idx}" ${k === 0 ? 'disabled' : ''} aria-label="Move up">↑</button>
+        <button class="mv" data-move="1" data-idx="${idx}" ${k === items.length - 1 ? 'disabled' : ''} aria-label="Move down">↓</button></div>`).join('');
+    });
+    document.getElementById('main').innerHTML = html;
+  }
+
+  function exForm() {
+    const isNew = editEx === 'new';
+    const e = isNew ? { name: '', day: day || daysList()[0] || '', muscle: '' } : data.exercises[editEx];
+    const muscles = [...new Set(data.exercises.map(x => x.muscle).filter(Boolean))];
+    return `<div class="card" id="exForm" data-day="${esc(e.day)}">
+      <div class="name">${isNew ? 'New exercise' : 'Edit exercise'}</div>
+      <label class="l">Name</label><input class="text" id="exName" value="${esc(e.name)}" autocomplete="off" placeholder="e.g. Bench Press">
+      <label class="l">Day</label><div class="chips wrap">${daysList().map(d =>
+        `<button class="chip ${d === e.day ? 'on' : ''}" data-pickday="${esc(d)}">${esc(d)}</button>`).join('')}
+        <button class="chip" data-pickday="" data-newday="1">＋ New day</button></div>
+      <input class="text" id="exDayNew" placeholder="Name of the new day" style="display:none;margin-top:8px" autocomplete="off">
+      <label class="l">Muscle</label><input class="text" id="exMuscle" list="muscleList" value="${esc(e.muscle)}" autocomplete="off" placeholder="e.g. Chest">
+      <datalist id="muscleList">${muscles.map(m => `<option value="${esc(m)}">`).join('')}</datalist>
+      ${isNew ? '' : '<div class="sub" style="margin-top:10px">Renaming also renames it in your history.</div>'}
+      <div class="actions">${isNew ? '' : '<button class="link danger" data-act="ex-del">Delete</button>'}<span style="flex:1"></span>
+        <button class="btn ghost" data-act="ex-cancel">Cancel</button><button class="btn" data-act="ex-save">Save</button></div>
+    </div>`;
+  }
+
+  function exList() { return data.exercises.map(x => ({ name: x.name, day: x.day, muscle: x.muscle })); }
+
+  // Sends the whole edited list to the spreadsheet and takes back the fresh data.
+  async function saveExercises(list, renames) {
+    const main = document.getElementById('main');
+    main.classList.add('busy');
+    try {
+      data = await api('saveExercises', { exercises: list, renames: renames || [] });
+      store('gymData', data);
+      (renames || []).forEach(r => {
+        if (logged[r.from]) { logged[r.to] = logged[r.from]; delete logged[r.from]; }
+        queue.forEach(q => { if (q.entry.exercise === r.from) q.entry.exercise = r.to; });
+      });
+      saveLogged(); store('gymQueue', queue);
+      return true;
+    } catch (err) {
+      toast('Could not save: ' + (err.server ? err.message : 'no signal, try again'));
+      return false;
+    } finally {
+      main.classList.remove('busy');
+    }
+  }
+
   // ---------- Progress tab ----------
   function renderProgress() {
-    const hist = withRecords(allHistory());
+    const hist = groupSessions(withRecords(allHistory()));
     if (detail) return renderDetail(hist);
     const days = ['All', ...daysList()];
     header('Progress', 'Your current weight for each exercise',
@@ -466,11 +614,12 @@
     let html = `<button class="back" data-act="back">‹ All exercises</button>`;
     if (!h.length) { document.getElementById('main').innerHTML = html + '<div class="msg">No sessions logged yet.</div>'; return; }
     const cur = h[h.length - 1], best = h.reduce((a, b) => b.weight > a.weight ? b : a), bestE = h.reduce((a, b) => b.est > a.est ? b : a);
+    const allSets = h.reduce((n, x) => n + x.sets, 0);
     html += `<div class="tiles">
       ${tile('Current', fmt(cur.weight), 'kg', `${cur.reps} reps · ${niceDate(cur.date)}`)}
       ${tile('Heaviest', fmt(best.weight), 'kg', shortDate(best.date))}
       ${tile('Est. max (1 rep)', fmt(bestE.est), 'kg', 'from weight × reps')}
-      ${tile('Sessions', h.length, '', `since ${shortDate(h[0].date)}`)}
+      ${tile('Sessions', h.length, '', `${allSets} sets since ${shortDate(h[0].date)}`)}
     </div>
     <div class="card">
       <div class="seg"><button data-metric="weight" class="${metric === 'weight' ? 'on' : ''}">Weight</button>
@@ -479,9 +628,9 @@
       ${h.length < 2 ? '<div class="sub" style="text-align:center">Log a few more sessions to see your trend.</div>' : ''}
     </div>
     <div class="section-title">All sessions</div>
-    <div class="card" style="padding:6px 12px"><table><thead><tr><th>Date</th><th class="num">Kg × reps × sets</th><th class="num">Est. max</th></tr></thead><tbody>
-      ${h.slice().reverse().map(x => `<tr><td>${x.pr ? '🏆 ' : ''}${shortDate(x.date)}</td>
-        <td class="num">${fmt(x.weight)} × ${x.reps} × ${x.sets}</td><td class="num">${fmt(x.est)}</td></tr>`).join('')}
+    <div class="card" style="padding:6px 12px"><table><thead><tr><th>Date</th><th class="num">Sets</th><th class="num">Est. max</th></tr></thead><tbody>
+      ${h.slice().reverse().map(x => `<tr><td style="white-space:nowrap">${x.pr ? '🏆 ' : ''}${shortDate(x.date)}</td>
+        <td class="num">${setsText(x.entries)}</td><td class="num">${fmt(x.est)}</td></tr>`).join('')}
     </tbody></table></div>`;
     document.getElementById('main').innerHTML = html;
   }
@@ -492,10 +641,10 @@
 
   // ---------- History tab ----------
   function renderHistory() {
-    const hist = withRecords(allHistory()), ex = exByName();
-    header('History', 'Your past workouts');
+    const rows = withRecords(allHistory()), ex = exByName();
+    header('History', 'Tap a set to change or delete it');
     const byDate = {};
-    hist.forEach(h => (byDate[h.date] = byDate[h.date] || []).push(h));
+    groupSessions(rows).forEach(s => (byDate[s.date] = byDate[s.date] || []).push(s));
     const dates = Object.keys(byDate).sort().reverse();
     if (!dates.length) { document.getElementById('main').innerHTML = '<div class="msg">No workouts logged yet.</div>'; return; }
     if (!Object.keys(openDays).length) openDays[dates[0]] = true;
@@ -503,14 +652,51 @@
       const items = byDate[d];
       const dayCount = {}; items.forEach(i => { const k = ex[i.exercise] ? ex[i.exercise].day : 'Other'; dayCount[k] = (dayCount[k] || 0) + 1; });
       const kind = Object.keys(dayCount).sort((a, b) => dayCount[b] - dayCount[a]).join(' + ');
-      const vol = items.reduce((s, i) => s + volume(i), 0), prs = items.filter(i => i.pr).length;
+      const vol = items.reduce((s, i) => s + i.entries.reduce((t, e) => t + volume(e), 0), 0), prs = items.filter(i => i.pr).length;
+      const sets = items.reduce((n, i) => n + i.sets, 0);
       return `<div class="card"><button class="hday" data-hday="${d}">
         <div class="top"><div class="name">${longDate(d)} · ${esc(kind)}</div><div class="muscle">${openDays[d] ? '▾' : '▸'}</div></div>
-        <div class="sub">${items.length} exercise${items.length > 1 ? 's' : ''} · ${fmtBig(vol)} kg lifted${prs ? ` · 🏆 ${prs} record${prs > 1 ? 's' : ''}` : ''}</div></button>
-        ${openDays[d] ? `<div class="hlist">${items.map(i => `<div class="hitem"><span>${i.pr ? '🏆 ' : ''}${esc(i.exercise)}${i.notes ? ` <span class="sub">· ${esc(i.notes)}</span>` : ''}</span>
-          <span class="v">${fmt(i.weight)} kg × ${i.reps} × ${i.sets}</span></div>`).join('')}</div>` : ''}
+        <div class="sub">${items.length} exercise${items.length > 1 ? 's' : ''} · ${sets} sets · ${fmtBig(vol)} kg lifted${prs ? ` · 🏆 ${prs} record${prs > 1 ? 's' : ''}` : ''}</div></button>
+        ${openDays[d] ? `<div class="hlist">${items.map(historySession).join('')}</div>` : ''}
       </div>`;
     }).join('');
+  }
+
+  function historySession(s) {
+    let n = 0;
+    return `<div class="hsess"><div class="hname">${s.pr ? '🏆 ' : ''}${esc(s.exercise)}</div>${s.entries.map(e => {
+      const label = e.sets > 1 ? `Sets ${n + 1}–${n + e.sets}` : `Set ${n + 1}`; n += Math.max(1, e.sets || 1);
+      const what = `${fmt(e.weight)} kg × ${e.reps}${e.sets > 1 ? ` × ${e.sets}` : ''}`;
+      if (!e.row) return `<div class="hset"><span>${label} <span class="sub">· waiting to send</span></span><span class="v">${what}</span></div>`;
+      if (editRow === e.row) return editBox(e);
+      return `<button class="hset" data-edit="${e.row}"><span>${label}${e.pr ? ' 🏆' : ''}${e.notes ? ` <span class="sub">· ${esc(e.notes)}</span>` : ''}</span>
+        <span class="v">${what} <span class="pen">✎</span></span></button>`;
+    }).join('')}</div>`;
+  }
+
+  function editBox(e) {
+    const several = e.sets > 1;
+    return `<div class="editbox" data-form="1" data-row="${e.row}" data-ex="${esc(e.exercise)}">
+      <div class="row ${several ? '' : 'two'}">
+        ${field('Kg', 'weight', e.weight, WEIGHT_STEP, 'decimal')}
+        ${field('Reps', 'reps', e.reps, 1, 'numeric')}
+        ${several ? field('Sets', 'sets', e.sets, 1, 'numeric') : ''}
+      </div>
+      <input class="note" data-k="notes" placeholder="Note (optional)" autocomplete="off" value="${esc(e.notes || '')}">
+      <div class="actions"><button class="link danger" data-act="row-del">Delete</button><span style="flex:1"></span>
+        <button class="btn ghost" data-act="row-cancel">Cancel</button><button class="btn" data-act="row-save">Save</button></div>
+    </div>`;
+  }
+
+  // Applies an edit or delete to this phone's copy, so it shows without reloading.
+  function changeRowLocally(row, entry) {
+    const apply = list => {
+      const i = list.findIndex(x => x.row === row); if (i < 0) return;
+      if (entry) Object.assign(list[i], entry); else list.splice(i, 1);
+    };
+    apply(data.history || []);
+    Object.keys(logged).filter(k => k[0] !== '_').forEach(k => { apply(logged[k]); if (!logged[k].length) delete logged[k]; });
+    store('gymData', data); saveLogged();
   }
 
   // ---------- Stats tab ----------
@@ -521,7 +707,7 @@
     const thisWeek = weekStart(today), monthKey = today.slice(0, 7);
     const weekCount = dates.filter(d => weekStart(d) === thisWeek).length;
     const monthCount = dates.filter(d => d.slice(0, 7) === monthKey).length;
-    const prMonth = hist.filter(h => h.pr && h.date.slice(0, 7) === monthKey).length;
+    const prMonth = groupSessions(hist).filter(h => h.pr && h.date.slice(0, 7) === monthKey).length;
 
     // Streak: weeks in a row (ending this week or last week) with at least one workout.
     const weeks = new Set(dates.map(weekStart));
@@ -547,7 +733,7 @@
       ${tile('Records this month', prMonth, '', 'new best est. max')}
     </div>
     <div class="section-title">Weight lifted per week</div>
-    <div class="card">${barChart(bars)}<div class="sub" style="text-align:center;margin-top:4px">kg × reps × sets, added up · tap a bar for details</div></div>
+    <div class="card">${barChart(bars)}<div class="sub" style="text-align:center;margin-top:4px">kg × reps of every set, added up · tap a bar for details</div></div>
     <div class="section-title">Last trained</div>
     <div class="card" style="padding:6px 12px"><table><tbody>${daysList().map(d =>
       `<tr><td>${esc(d)}</td><td class="num">${last[d] ? niceDate(last[d]) : 'not yet'}</td></tr>`).join('')}</tbody></table></div>
@@ -580,7 +766,7 @@
     const px = h.map((x, i) => t1 === t0 ? (h.length === 1 ? (L + W - R) / 2 : L + (W - L - R) * i / (h.length - 1)) : L + (W - L - R) * (t[i] - t0) / (t1 - t0));
     const py = vals.map(v => T + (H - T - B) * (1 - (v - y0) / (y1 - y0)));
     const id = 'c' + (++chartSeq);
-    charts[id] = { pts: h.map((x, i) => ({ x: px[i], y: py[i], title: `${fmt(vals[i])} kg`, sub: `${shortDate(x.date)} · ${fmt(x.weight)} kg × ${x.reps} × ${x.sets}` })), W, H, T, B };
+    charts[id] = { pts: h.map((x, i) => ({ x: px[i], y: py[i], title: `${fmt(vals[i])} kg`, sub: `${shortDate(x.date)} · top set ${fmt(x.weight)} kg × ${x.reps} · ${x.sets} sets` })), W, H, T, B };
     const grid = ticks.map(v => { const y = T + (H - T - B) * (1 - (v - y0) / (y1 - y0));
       return `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="var(--grid)" stroke-width="1"/>
         <text x="${L - 6}" y="${y + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(v)}</text>`; }).join('');
@@ -699,23 +885,107 @@
       return;
     }
     if (b.dataset.rest) { menu.classList.remove('open'); startTimer(+b.dataset.rest); return; }
-    if (b.dataset.view) { view = b.dataset.view; store('gymView', view); if (view !== 'progress') detail = null; render(); toTop(); return; }
+    if (b.dataset.view) { view = b.dataset.view; store('gymView', view); if (view !== 'progress') detail = null; manage = false; editEx = null; editRow = null; render(); toTop(); return; }
     if (b.dataset.act === 'refresh') { load(true); return; }
     if (b.dataset.day) { day = b.dataset.day; render(); toTop(); return; }
     if (b.dataset.filter) { progFilter = b.dataset.filter; render(); return; }
     if (b.dataset.detail) { detail = b.dataset.detail; render(); toTop(); return; }
     if (b.dataset.act === 'back') { detail = null; render(); toTop(); return; }
     if (b.dataset.metric) { metric = b.dataset.metric; render(); return; }
-    if (b.dataset.hday) { openDays[b.dataset.hday] = !openDays[b.dataset.hday]; render(); return; }
+    if (b.dataset.hday) { openDays[b.dataset.hday] = !openDays[b.dataset.hday]; editRow = null; render(); return; }
+    if (!data) return;
 
-    const el = b.closest('.card[data-i]'); if (!el || !data) return;
-    const e = cardExercise(el);
-
+    // + and − buttons (workout cards and the History edit box)
     if (b.dataset.step) {
-      const inp = el.querySelector(`input[data-k="${b.dataset.k}"]`);
+      const f = b.closest('[data-form]'); if (!f) return;
+      const inp = f.querySelector(`input[data-k="${b.dataset.k}"]`);
       inp.value = fmt(Math.max(0, (parseFloat(inp.value) || 0) + parseFloat(b.dataset.step)));
-      updateHint(el); return;
+      if (f.dataset.i !== undefined) updateHint(f);
+      return;
     }
+
+    // Two taps to delete: the first one asks.
+    function armed() {
+      if (b.classList.contains('armed')) return true;
+      b.classList.add('armed'); b.textContent = 'Tap again to delete';
+      setTimeout(() => { b.classList.remove('armed'); b.textContent = 'Delete'; }, 3000);
+      return false;
+    }
+
+    // History: change or delete an earlier set
+    if (b.dataset.edit) { editRow = +b.dataset.edit; render(); return; }
+    if (b.dataset.act === 'row-cancel') { editRow = null; render(); return; }
+    if (b.dataset.act === 'row-save' || b.dataset.act === 'row-del') {
+      const box = b.closest('.editbox'), row = +box.dataset.row, exercise = box.dataset.ex;
+      const del = b.dataset.act === 'row-del';
+      if (del && !armed()) return;
+      const c = readCard(box);
+      if (!del && c.reps <= 0) { toast('Reps need to be above 0.'); return; }
+      box.classList.add('busy');
+      try {
+        if (del) await api('deleteEntry', { row, exercise });
+        else await api('updateEntry', { row, exercise, entry: c });
+      } catch (err) {
+        box.classList.remove('busy');
+        toast('Could not save: ' + (err.server ? err.message : 'no signal, try again')); return;
+      }
+      changeRowLocally(row, del ? null : c);
+      editRow = null; render(); toast(del ? 'Deleted' : 'Saved', true);
+      return;
+    }
+
+    // Exercise editor
+    if (b.dataset.act === 'manage') { manage = true; editEx = null; render(); toTop(); return; }
+    if (b.dataset.act === 'manage-done') { manage = false; editEx = null; render(); toTop(); return; }
+    if (b.dataset.act === 'ex-new') { editEx = 'new'; render(); toTop(); return; }
+    if (b.dataset.ex !== undefined && b.classList.contains('einfo')) { editEx = +b.dataset.ex; render(); toTop(); return; }
+    if (b.dataset.act === 'ex-cancel') { editEx = null; render(); return; }
+    if (b.dataset.pickday !== undefined) {
+      const form = document.getElementById('exForm'), nd = document.getElementById('exDayNew');
+      form.querySelectorAll('[data-pickday]').forEach(c => c.classList.toggle('on', c === b));
+      form.dataset.day = b.dataset.pickday;
+      nd.style.display = b.dataset.newday ? 'block' : 'none';
+      if (b.dataset.newday) nd.focus();
+      return;
+    }
+    if (b.dataset.move) {
+      const list = exList(), i = +b.dataset.idx, dir = +b.dataset.move;
+      let j = i + dir; while (j >= 0 && j < list.length && list[j].day !== list[i].day) j += dir;
+      if (j < 0 || j >= list.length) return;
+      [list[i], list[j]] = [list[j], list[i]];
+      if (await saveExercises(list)) render();
+      return;
+    }
+    if (b.dataset.act === 'ex-save' || b.dataset.act === 'ex-del') {
+      const form = document.getElementById('exForm'), list = exList(), isNew = editEx === 'new';
+      const renames = [];
+      if (b.dataset.act === 'ex-del') {
+        if (!armed()) return;
+        list.splice(editEx, 1);
+      } else {
+        const name = document.getElementById('exName').value.trim().replace(/\s+/g, ' ');
+        const dayName = (form.dataset.day || document.getElementById('exDayNew').value).trim();
+        const muscle = document.getElementById('exMuscle').value.trim();
+        if (!name) { toast('Give the exercise a name.'); return; }
+        if (!dayName) { toast('Pick a day, or type the name of a new day.'); return; }
+        if (list.some((x, k) => k !== editEx && x.name.toLowerCase() === name.toLowerCase())) { toast(`"${name}" already exists.`); return; }
+        const item = { name, day: dayName, muscle };
+        if (isNew) {
+          // Put it after the last exercise of the same day.
+          let at = -1; list.forEach((x, k) => { if (x.day === dayName) at = k; });
+          if (at < 0) list.push(item); else list.splice(at + 1, 0, item);
+        } else {
+          if (list[editEx].name !== name) renames.push({ from: list[editEx].name, to: name });
+          list[editEx] = item;
+        }
+      }
+      const was = b.dataset.act === 'ex-del' ? 'Deleted' : 'Saved';
+      if (await saveExercises(list, renames)) { editEx = null; render(); toTop(); toast(was, true); }
+      return;
+    }
+
+    const el = b.closest('.card[data-i]'); if (!el) return;
+    const e = cardExercise(el);
     if (b.dataset.act === 'apply') {
       el.querySelector('input[data-k="weight"]').value = fmt(+b.dataset.w);
       el.querySelector('input[data-k="reps"]').value = b.dataset.r;
@@ -723,36 +993,39 @@
     }
     if (b.dataset.act === 'log') {
       const c = readCard(el);
-      if (c.reps <= 0 || c.sets <= 0) { toast('Reps and sets need to be above 0.'); return; }
+      if (c.reps <= 0) { toast('Reps need to be above 0.'); return; }
       const prevBest = bestEst(e.name);
       const pr = prevBest >= 0 && est(c.weight, c.reps) > prevBest + 0.05;
-      const entry = Object.assign({ exercise: e.name }, c);
+      const entry = Object.assign({ exercise: e.name }, c, { sets: 1 });
+      const set = Object.assign({}, c, { sets: 1, pr });
+      startTimer(timer.secs); // rest starts right away (and sound must start from the tap)
       b.disabled = true; b.textContent = 'Saving…';
       try {
-        const row = await api('logEntry', { entry });
-        logged[e.name] = Object.assign({}, c, { row, pr });
+        set.row = await api('logEntry', { entry });
       } catch (err) {
-        if (err.server) { b.disabled = false; b.textContent = 'Done'; toast('Could not save: ' + err.message); return; }
+        if (err.server) { b.disabled = false; b.textContent = 'Log set'; toast('Could not save: ' + err.message); return; }
         // No signal: keep it on the phone and send later.
-        const id = Date.now() + '-' + Math.random().toString(36).slice(2, 7);
-        queue.push({ id, entry }); store('gymQueue', queue);
-        logged[e.name] = Object.assign({}, c, { qid: id, pr });
+        set.qid = Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+        queue.push({ id: set.qid, entry }); store('gymQueue', queue);
       }
+      (logged[e.name] = logged[e.name] || []).push(set);
       saveLogged(); render();
       if (pr) toast(`🏆 New record on ${e.name}!`, true);
       return;
     }
     if (b.dataset.act === 'undo') {
-      const d = logged[e.name];
+      const list = logged[e.name] || [], d = list[+b.dataset.n]; if (!d) return;
       b.disabled = true;
       if (!d.row) {
         queue = queue.filter(q => q.id !== d.qid); store('gymQueue', queue);
       } else {
         try { await api('undoEntry', { row: d.row, exercise: e.name }); }
-        catch (err) { b.disabled = false; toast('Could not undo: ' + (err.server ? err.message : 'no signal, try again')); return; }
+        catch (err) { b.disabled = false; toast('Could not remove: ' + (err.server ? err.message : 'no signal, try again')); return; }
         logged._undone = (logged._undone || []).concat(d.row);
       }
-      delete logged[e.name]; saveLogged(); render();
+      list.splice(+b.dataset.n, 1);
+      if (!list.length) delete logged[e.name];
+      saveLogged(); render();
     }
   });
   document.addEventListener('input', ev => { const el = ev.target.closest('.card[data-i]'); if (el) updateHint(el); });
