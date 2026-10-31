@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gym Logger</title>
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gym Logger">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+  :root {
+    --bg: #0f1115; --card: #1a1d24; --line: #2a2e38; --text: #f2f3f5; --muted: #9aa0ab;
+    --accent: #4f8cff; --accent-press: #3a72de; --good: #2fbf71; --warn: #ff6b6b; --wait: #f5b942;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { padding: 0 16px calc(40px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto;
+    -webkit-user-select: none; user-select: none; overscroll-behavior-y: contain; }
+  input { -webkit-user-select: text; user-select: text; }
+  header { position: sticky; top: 0; background: var(--bg); padding: calc(12px + env(safe-area-inset-top)) 0 12px; z-index: 5; }
+  .head { display: flex; justify-content: space-between; align-items: center; }
+  h1 { font-size: 22px; margin: 0 0 2px; }
+  .sub { color: var(--muted); font-size: 14px; }
+  .refresh { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 10px;
+    padding: 8px 10px; font-size: 14px; }
+  .pending { color: var(--wait); font-size: 13px; margin-top: 4px; display: none; }
+  .tabs { display: flex; gap: 8px; margin-top: 12px; }
+  .tab { flex: 1; padding: 12px 0; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); font-size: 16px; font-weight: 600; }
+  .tab.on { background: var(--accent); border-color: var(--accent); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 14px; margin-top: 12px; }
+  .card.done { border-color: var(--good); }
+  .card.queued { border-color: var(--wait); }
+  .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .name { font-weight: 700; font-size: 17px; }
+  .muscle { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .last { color: var(--muted); font-size: 14px; margin: 4px 0 12px; }
+  .row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 6px; }
+  .field label { display: block; text-align: center; color: var(--muted); font-size: 12px;
+    text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+  .stepper { display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .stepper button { width: 32px; flex: none; border: 0; background: #232731; color: var(--text); font-size: 20px; }
+  .stepper button:active { background: #2e3340; }
+  .stepper input { flex: 1; min-width: 0; width: 100%; border: 0; background: transparent; color: var(--text);
+    text-align: center; font-size: 18px; font-weight: 700; padding: 10px 0; }
+  .stepper input:focus { outline: none; background: #20242d; }
+  .note { width: 100%; margin-top: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line);
+    background: transparent; color: var(--text); font-size: 16px; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+  .hint { flex: 1; font-size: 13px; color: var(--muted); }
+  .hint.up { color: var(--good); }
+  .btn { border: 0; border-radius: 12px; padding: 12px 20px; font-size: 16px; font-weight: 700;
+    background: var(--accent); color: white; }
+  .btn:active { background: var(--accent-press); }
+  .btn:disabled { opacity: .6; }
+  .logged { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .logged .check { color: var(--good); font-weight: 700; flex: 1; }
+  .queued .check { color: var(--wait); }
+  .link { background: none; border: 0; color: var(--muted); font-size: 15px; text-decoration: underline; padding: 8px; }
+  .toast { position: fixed; left: 16px; right: 16px; bottom: calc(20px + env(safe-area-inset-bottom)); max-width: 528px; margin: 0 auto;
+    background: var(--warn); color: white; padding: 12px 14px; border-radius: 12px; font-weight: 600;
+    display: none; z-index: 10; }
+  .msg { color: var(--muted); padding: 40px 0; text-align: center; }
+  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+</style>
+</head>
+<body>
+<header>
+  <div class="head">
+    <div><h1>Gym Logger</h1><div class="sub" id="sub">Loading…</div></div>
+    <button class="refresh" id="refresh" aria-label="Reload from spreadsheet">↻</button>
+  </div>
+  <div class="pending" id="pending"></div>
+  <div class="tabs" id="tabs"></div>
+</header>
+<main id="list"><div class="msg">Loading your exercises…</div></main>
+<div class="toast" id="toast"></div>
+
+<script>
+  // Address of the Google Apps Script service that reads and writes the spreadsheet.
+  const API_URL = 'https://script.google.com/macros/s/AKfycbyUhtYWlTl25hrCZia1esklFDHGef-CYwE_50crfG80A_4XxTumu11dYmMad-JwL3dR/exec';
+  const WEIGHT_STEP = 2.5;
+
+  // ---------- small helpers ----------
+  function store(k, v) {
+    try {
+      if (v === undefined) return JSON.parse(localStorage.getItem(k));
+      if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v));
+    } catch (e) { return null; }
+  }
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.display = 'block';
+    clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', 4000);
+  }
+  function fmt(n) { return (Math.round(n * 10) / 10).toString(); }
+  function est(w, r) { return w * (1 + r / 30); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function todayIso() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function niceDate(iso, today) {
+    if (iso === today) return 'today';
+    const d = new Date(iso + 'T12:00:00');
+    if (isNaN(d)) return iso;
+    const days = Math.round((new Date(today + 'T12:00:00') - d) / 864e5);
+    if (days === 1) return 'yesterday';
+    if (days > 1 && days < 7) return days + ' days ago';
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  }
+
+  // ---------- secret key (comes from the setup link, kept on this phone) ----------
+  (function readKeyFromLink() {
+    const m = location.hash.match(/k=([A-Za-z0-9_-]+)/);
+    if (m) store('gymKey', m[1]);
+  })();
+  const KEY = store('gymKey');
+
+  // ---------- talking to the spreadsheet ----------
+  async function api(action, extra) {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // keeps it a "simple" request Google accepts
+      body: JSON.stringify(Object.assign({ action, key: KEY }, extra || {}))
+    });
+    const out = await res.json();
+    if (!out.ok) { const e = new Error(out.error || 'Error'); e.server = true; throw e; }
+    return out.result;
+  }
+
+  // Entries that couldn't be sent yet (no signal). Sent again automatically.
+  let queue = store('gymQueue') || [];
+  let sending = false;
+  async function flushQueue() {
+    if (sending || !queue.length) return showPending();
+    sending = true;
+    try {
+      while (queue.length) {
+        const item = queue[0];
+        const row = await api('logEntry', { entry: item.entry });
+        queue.shift(); store('gymQueue', queue);
+        if (logged[item.entry.exercise] && logged[item.entry.exercise].qid === item.id) {
+          logged[item.entry.exercise] = Object.assign({}, item.entry, { row });
+          saveLogged();
+        }
+      }
+    } catch (e) {
+      if (e.server) { toast('Could not save a waiting entry: ' + e.message); }
+    } finally {
+      sending = false; showPending(); if (data) render();
+    }
+  }
+  function showPending() {
+    const p = document.getElementById('pending');
+    p.style.display = queue.length ? 'block' : 'none';
+    p.textContent = queue.length ? `⏳ ${queue.length} waiting to send (no signal). They'll send automatically.` : '';
+  }
+
+  // ---------- state ----------
+  let data = store('gymData');
+  let day = store('gymDay');
+  // What you logged today, so it survives closing the app.
+  let logged = (store('gymLogged') || {});
+  if (logged._date !== todayIso()) logged = { _date: todayIso() };
+  function saveLogged() { store('gymLogged', logged); }
+
+  function exercisesForDay() { return data.exercises.filter(e => e.day === day); }
+
+  // ---------- drawing ----------
+  function render() {
+    const days = [...new Set(data.exercises.map(e => e.day))];
+    if (!days.includes(day)) day = days[0];
+    document.getElementById('tabs').innerHTML = days.map(d =>
+      `<button class="tab ${d === day ? 'on' : ''}" data-day="${esc(d)}">${esc(d)}</button>`).join('');
+    const list = exercisesForDay();
+    document.getElementById('list').innerHTML = list.map((e, i) => card(e, i)).join('') ||
+      '<div class="msg">No exercises for this day yet. Add them on the Exercises sheet.</div>';
+    document.querySelectorAll('.card').forEach(updateHint);
+    showPending();
+  }
+
+  function card(e, i) {
+    const l = e.last, done = logged[e.name];
+    const head = `<div class="top"><div class="name">${esc(e.name)}</div><div class="muscle">${esc(e.muscle)}</div></div>`;
+    if (done) {
+      const waiting = !done.row;
+      return `<div class="card ${waiting ? 'queued' : 'done'}" data-i="${i}">${head}
+        <div class="logged"><div class="check">${waiting ? '⏳' : '✓'} ${fmt(done.weight)} kg × ${done.reps} × ${done.sets}${waiting ? ' · waiting to send' : ''}</div>
+        <button class="link" data-act="undo">Undo</button></div></div>`;
+    }
+    const lastTxt = l ? `Last (${niceDate(l.date, data.today || todayIso())}): <b>${fmt(l.weight)} kg × ${l.reps} reps × ${l.sets} sets</b>` +
+      (l.notes ? ` · ${esc(l.notes)}` : '') : 'First time, no history yet';
+    const w = l ? l.weight : 0, r = l ? l.reps : 10, s = l ? l.sets : 3;
+    return `<div class="card" data-i="${i}">${head}
+      <div class="last">${lastTxt}</div>
+      <div class="row">
+        ${field('Kg', 'weight', w, WEIGHT_STEP, 'decimal')}
+        ${field('Reps', 'reps', r, 1, 'numeric')}
+        ${field('Sets', 'sets', s, 1, 'numeric')}
+      </div>
+      <input class="note" data-k="notes" placeholder="Note (optional)" autocomplete="off">
+      <div class="actions"><div class="hint"></div><button class="btn" data-act="log">Done</button></div>
+    </div>`;
+  }
+
+  function field(label, key, val, step, mode) {
+    return `<div class="field"><label>${label}</label><div class="stepper">
+      <button data-step="${-step}" data-k="${key}" aria-label="Less">−</button>
+      <input type="number" inputmode="${mode}" step="any" data-k="${key}" value="${fmt(val)}">
+      <button data-step="${step}" data-k="${key}" aria-label="More">+</button>
+    </div></div>`;
+  }
+
+  function readCard(el) {
+    const v = k => parseFloat(String(el.querySelector(`input[data-k="${k}"]`).value).replace(',', '.')) || 0;
+    return { weight: v('weight'), reps: Math.round(v('reps')), sets: Math.round(v('sets')),
+      notes: el.querySelector('input[data-k="notes"]').value.trim() };
+  }
+
+  function updateHint(el) {
+    const e = exercisesForDay()[+el.dataset.i];
+    const h = el.querySelector('.hint'); if (!h || !e || !e.last) return;
+    const c = readCard(el), now = est(c.weight, c.reps), before = est(e.last.weight, e.last.reps);
+    if (now > before + 0.05) { h.textContent = '↑ stronger than last time'; h.className = 'hint up'; }
+    else if (now < before - 0.05) { h.textContent = 'Lighter than last time'; h.className = 'hint'; }
+    else { h.textContent = 'Same as last time'; h.className = 'hint'; }
+  }
+
+  // ---------- taps ----------
+  document.addEventListener('click', async ev => {
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.id === 'refresh') { load(true); return; }
+    if (b.dataset.day) { day = b.dataset.day; store('gymDay', day); render(); window.scrollTo(0, 0); return; }
+
+    const el = b.closest('.card'); if (!el || !data) return;
+    const e = exercisesForDay()[+el.dataset.i];
+
+    if (b.dataset.step) {
+      const inp = el.querySelector(`input[data-k="${b.dataset.k}"]`);
+      inp.value = fmt(Math.max(0, (parseFloat(inp.value) || 0) + parseFloat(b.dataset.step)));
+      updateHint(el); return;
+    }
+
+    if (b.dataset.act === 'log') {
+      const c = readCard(el);
+      if (c.reps <= 0 || c.sets <= 0) { toast('Reps and sets need to be above 0.'); return; }
+      const entry = Object.assign({ exercise: e.name }, c);
+      b.disabled = true; b.textContent = 'Saving…';
+      try {
+        const row = await api('logEntry', { entry });
+        logged[e.name] = Object.assign({}, c, { row });
+      } catch (err) {
+        if (err.server) { b.disabled = false; b.textContent = 'Done'; toast('Could not save: ' + err.message); return; }
+        // No signal: keep it on the phone and send later.
+        const id = Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+        queue.push({ id, entry }); store('gymQueue', queue);
+        logged[e.name] = Object.assign({}, c, { qid: id });
+      }
+      saveLogged(); render();
+      return;
+    }
+
+    if (b.dataset.act === 'undo') {
+      const d = logged[e.name];
+      b.disabled = true;
+      if (!d.row) {
+        queue = queue.filter(q => q.id !== d.qid); store('gymQueue', queue);
+      } else {
+        try { await api('undoEntry', { row: d.row, exercise: e.name }); }
+        catch (err) { b.disabled = false; toast('Could not undo: ' + (err.server ? err.message : 'no signal, try again')); return; }
+      }
+      delete logged[e.name]; saveLogged(); render();
+    }
+  });
+  document.addEventListener('input', ev => { const el = ev.target.closest('.card'); if (el) updateHint(el); });
+
+  // ---------- start ----------
+  function showDate() {
+    document.getElementById('sub').textContent =
+      new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  }
+  async function load(manual) {
+    if (!KEY) {
+      document.getElementById('list').innerHTML = '<div class="msg">This phone isn\'t set up yet.<br>Open the setup link you were given, then add the app to your home screen from that page.</div>';
+      document.getElementById('sub').textContent = '';
+      return;
+    }
+    showDate();
+    if (data) render();
+    try {
+      data = await api('getData'); store('gymData', data); render();
+    } catch (err) {
+      if (!data) document.getElementById('list').innerHTML = '<div class="msg">Could not load your exercises.<br>' + esc(err.message || err) + '<br><br>Check your signal and tap ↻.</div>';
+      else if (manual) toast(err.server ? err.message : 'No signal. Showing saved exercises.');
+    }
+    flushQueue();
+  }
+  window.addEventListener('online', flushQueue);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { flushQueue(); if (logged._date !== todayIso()) { logged = { _date: todayIso() }; saveLogged(); load(); } } });
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  load();
+</script>
+</body>
+</html>
