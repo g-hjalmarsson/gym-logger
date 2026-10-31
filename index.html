@@ -14,34 +14,50 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>
   :root {
-    --bg: #0f1115; --card: #1a1d24; --line: #2a2e38; --text: #f2f3f5; --muted: #9aa0ab;
-    --accent: #4f8cff; --accent-press: #3a72de; --good: #2fbf71; --warn: #ff6b6b; --wait: #f5b942;
+    --bg: #0f1115; --card: #1a1d24; --line: #2a2e38; --grid: #262a33; --text: #f2f3f5; --muted: #9aa0ab;
+    --accent: #4f8cff; --accent-press: #3a72de; --accent-soft: rgba(79,140,255,.16);
+    --good: #2fbf71; --warn: #ff6b6b; --wait: #f5b942;
+    --nav-h: 64px;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--text);
     font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  body { padding: 0 16px calc(40px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto;
+  body { padding: 0 16px calc(var(--nav-h) + 90px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto;
     -webkit-user-select: none; user-select: none; overscroll-behavior-y: contain; }
   input { -webkit-user-select: text; user-select: text; }
-  header { position: sticky; top: 0; background: var(--bg); padding: calc(12px + env(safe-area-inset-top)) 0 12px; z-index: 5; }
-  .head { display: flex; justify-content: space-between; align-items: center; }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* header */
+  header { position: sticky; top: 0; background: var(--bg); padding: calc(12px + env(safe-area-inset-top)) 0 10px; z-index: 5; }
+  .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   h1 { font-size: 22px; margin: 0 0 2px; }
   .sub { color: var(--muted); font-size: 14px; }
-  .refresh { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 10px;
+  .icon-btn { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 10px;
     padding: 8px 10px; font-size: 14px; }
   .pending { color: var(--wait); font-size: 13px; margin-top: 4px; display: none; }
   .tabs { display: flex; gap: 8px; margin-top: 12px; }
-  .tab { flex: 1; padding: 12px 0; border-radius: 12px; border: 1px solid var(--line);
-    background: var(--card); color: var(--text); font-size: 16px; font-weight: 600; }
+  .tab { flex: 1; padding: 11px 0; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); font-size: 15px; font-weight: 600; }
   .tab.on { background: var(--accent); border-color: var(--accent); }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px;
-    padding: 14px; margin-top: 12px; }
+  .chips { display: flex; gap: 6px; margin-top: 12px; overflow-x: auto; }
+  .chip { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: none;
+    color: var(--muted); font-size: 14px; font-weight: 600; white-space: nowrap; }
+  .chip.on { background: var(--accent-soft); color: var(--text); border-color: var(--accent); }
+
+  /* cards */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-top: 12px; }
   .card.done { border-color: var(--good); }
   .card.queued { border-color: var(--wait); }
   .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .name { font-weight: 700; font-size: 17px; }
   .muscle { color: var(--muted); font-size: 13px; white-space: nowrap; }
-  .last { color: var(--muted); font-size: 14px; margin: 4px 0 12px; }
+  .last { color: var(--muted); font-size: 14px; margin: 4px 0 10px; }
+  .suggest { display: flex; align-items: center; gap: 8px; background: var(--accent-soft); border-radius: 10px;
+    padding: 8px 10px; margin-bottom: 10px; font-size: 14px; }
+  .suggest span { flex: 1; }
+  .suggest button { border: 0; background: var(--accent); color: white; border-radius: 8px; padding: 6px 12px; font-weight: 700; font-size: 14px; }
+  .banner { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; padding: 10px 12px;
+    margin-top: 12px; font-size: 14px; }
   .row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 6px; }
   .field label { display: block; text-align: center; color: var(--muted); font-size: 12px;
     text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
@@ -56,38 +72,111 @@
   .actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
   .hint { flex: 1; font-size: 13px; color: var(--muted); }
   .hint.up { color: var(--good); }
-  .btn { border: 0; border-radius: 12px; padding: 12px 20px; font-size: 16px; font-weight: 700;
-    background: var(--accent); color: white; }
+  .btn { border: 0; border-radius: 12px; padding: 12px 20px; font-size: 16px; font-weight: 700; background: var(--accent); color: white; }
   .btn:active { background: var(--accent-press); }
   .btn:disabled { opacity: .6; }
   .logged { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
   .logged .check { color: var(--good); font-weight: 700; flex: 1; }
   .queued .check { color: var(--wait); }
   .link { background: none; border: 0; color: var(--muted); font-size: 15px; text-decoration: underline; padding: 8px; }
-  .toast { position: fixed; left: 16px; right: 16px; bottom: calc(20px + env(safe-area-inset-bottom)); max-width: 528px; margin: 0 auto;
-    background: var(--warn); color: white; padding: 12px 14px; border-radius: 12px; font-weight: 600;
-    display: none; z-index: 10; }
   .msg { color: var(--muted); padding: 40px 0; text-align: center; }
+  .section-title { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .05em; margin: 22px 0 4px; }
+
+  /* progress list */
+  .prow { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; color: var(--text);
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-top: 8px; }
+  .prow .info { flex: 1; min-width: 0; }
+  .prow .pname { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prow .pmeta { color: var(--muted); font-size: 13px; }
+  .prow .pval { text-align: right; }
+  .prow .big { font-size: 20px; font-weight: 800; }
+  .prow .unit { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .delta { font-size: 13px; color: var(--muted); }
+  .delta.up { color: var(--good); }
+  .spark { flex: none; }
+  .prow.dim { opacity: .55; }
+
+  /* stat tiles */
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+  .tile .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .tile .value { font-size: 26px; font-weight: 800; margin-top: 2px; }
+  .tile .value small { font-size: 14px; color: var(--muted); font-weight: 600; }
+  .tile .note2 { color: var(--muted); font-size: 12px; }
+
+  /* detail */
+  .back { background: none; border: 0; color: var(--accent); font-size: 16px; padding: 4px 0; font-weight: 600; }
+  .seg { display: flex; background: #14171d; border: 1px solid var(--line); border-radius: 10px; padding: 3px; margin-top: 12px; }
+  .seg button { flex: 1; border: 0; background: none; color: var(--muted); padding: 8px; border-radius: 8px; font-weight: 600; font-size: 14px; }
+  .seg button.on { background: var(--card); color: var(--text); }
+  .chart-wrap { position: relative; margin-top: 8px; touch-action: pan-y; }
+  .chart-wrap svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .tip { position: absolute; pointer-events: none; background: #0b0d11; border: 1px solid var(--line); border-radius: 8px;
+    padding: 6px 9px; font-size: 13px; white-space: nowrap; display: none; z-index: 2; transform: translateX(-50%); }
+  .tip b { display: block; }
+  .tip span { color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 4px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; padding: 6px 4px; }
+  td { padding: 9px 4px; border-top: 1px solid var(--line); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* history */
+  .hday { width: 100%; text-align: left; color: var(--text); background: none; border: 0; padding: 0; }
+  .hlist { margin-top: 10px; }
+  .hitem { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .hitem .v { color: var(--muted); white-space: nowrap; }
+
+  /* bottom nav */
+  nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; background: rgba(15,17,21,.96);
+    border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  nav .inner { display: flex; max-width: 560px; margin: 0 auto; height: var(--nav-h); }
+  nav button { flex: 1; background: none; border: 0; color: var(--muted); font-size: 11px; font-weight: 600;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+  nav button.on { color: var(--accent); }
+  nav svg { width: 24px; height: 24px; }
+
+  /* rest timer */
+  .timer { position: fixed; right: 16px; bottom: calc(var(--nav-h) + 14px + env(safe-area-inset-bottom)); z-index: 9;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .timer-btn { border: 0; border-radius: 999px; padding: 12px 18px; font-size: 16px; font-weight: 800; color: white;
+    background: var(--accent); box-shadow: 0 6px 18px rgba(0,0,0,.45); font-variant-numeric: tabular-nums; }
+  .timer-btn.running { background: #232731; border: 2px solid var(--accent); }
+  .timer-btn.ring { background: var(--good); animation: pulse .6s ease-in-out infinite alternate; }
+  @keyframes pulse { to { transform: scale(1.08); } }
+  .timer-menu { display: none; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 6px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+  .timer-menu.open { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .timer-menu button { border: 1px solid var(--line); background: #232731; color: var(--text); border-radius: 10px;
+    padding: 10px 14px; font-size: 15px; font-weight: 700; }
+
+  .toast { position: fixed; left: 16px; right: 16px; bottom: calc(var(--nav-h) + 76px + env(safe-area-inset-bottom)); max-width: 528px; margin: 0 auto;
+    background: var(--warn); color: white; padding: 12px 14px; border-radius: 12px; font-weight: 600; display: none; z-index: 10; }
+  .toast.good { background: var(--good); }
   input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   input[type=number] { -moz-appearance: textfield; }
 </style>
 </head>
 <body>
-<header>
-  <div class="head">
-    <div><h1>Gym Logger</h1><div class="sub" id="sub">Loading…</div></div>
-    <button class="refresh" id="refresh" aria-label="Reload from spreadsheet">↻</button>
+<header id="header"></header>
+<main id="main"><div class="msg">Loading…</div></main>
+
+<div class="timer" id="timer">
+  <div class="timer-menu" id="timerMenu">
+    <button data-rest="60">1:00</button><button data-rest="90">1:30</button>
+    <button data-rest="120">2:00</button><button data-rest="180">3:00</button>
   </div>
-  <div class="pending" id="pending"></div>
-  <div class="tabs" id="tabs"></div>
-</header>
-<main id="list"><div class="msg">Loading your exercises…</div></main>
+  <button class="timer-btn" id="timerBtn" aria-label="Rest timer">⏱ Rest</button>
+</div>
+
+<nav><div class="inner" id="nav"></div></nav>
 <div class="toast" id="toast"></div>
 
 <script>
   // Address of the Google Apps Script service that reads and writes the spreadsheet.
   const API_URL = 'https://script.google.com/macros/s/AKfycbyUhtYWlTl25hrCZia1esklFDHGef-CYwE_50crfG80A_4XxTumu11dYmMad-JwL3dR/exec';
   const WEIGHT_STEP = 2.5;
+  const REP_TOP = 12;     // when you reach this many reps, it suggests adding weight
+  const REP_RESET = 8;    // ...and starting again from this many reps
 
   // ---------- small helpers ----------
   function store(k, v) {
@@ -96,30 +185,33 @@
       if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v));
     } catch (e) { return null; }
   }
-  function toast(msg) {
+  function toast(msg, good) {
     const t = document.getElementById('toast');
-    t.textContent = msg; t.style.display = 'block';
-    clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', 4000);
+    t.textContent = msg; t.className = 'toast' + (good ? ' good' : ''); t.style.display = 'block';
+    clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', good ? 3000 : 4000);
   }
   function fmt(n) { return (Math.round(n * 10) / 10).toString(); }
+  function fmtBig(n) { return Math.round(n).toLocaleString('en-US').replace(/,/g, ' '); }
   function est(w, r) { return w * (1 + r / 30); }
   function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-  function todayIso() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
-  function niceDate(iso, today) {
-    if (iso === today) return 'today';
-    const d = new Date(iso + 'T12:00:00');
-    if (isNaN(d)) return iso;
-    const days = Math.round((new Date(today + 'T12:00:00') - d) / 864e5);
+  function isoOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function todayIso() { return isoOf(new Date()); }
+  function dateOf(iso) { return new Date(iso + 'T12:00:00'); }
+  function daysBetween(a, b) { return Math.round((dateOf(b) - dateOf(a)) / 864e5); }
+  function niceDate(iso) {
+    const days = daysBetween(iso, todayIso());
+    if (days === 0) return 'today';
     if (days === 1) return 'yesterday';
     if (days > 1 && days < 7) return days + ' days ago';
-    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    return shortDate(iso);
   }
+  function shortDate(iso) { const d = dateOf(iso); return isNaN(d) ? iso : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
+  function longDate(iso) { return dateOf(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
+  function weekStart(iso) { const d = dateOf(iso); const wd = (d.getDay() + 6) % 7; d.setDate(d.getDate() - wd); return isoOf(d); }
+  function volume(e) { return e.weight * e.reps * e.sets; }
 
   // ---------- secret key (comes from the setup link, kept on this phone) ----------
-  (function readKeyFromLink() {
-    const m = location.hash.match(/k=([A-Za-z0-9_-]+)/);
-    if (m) store('gymKey', m[1]);
-  })();
+  (function readKeyFromLink() { const m = location.hash.match(/k=([A-Za-z0-9_-]+)/); if (m) store('gymKey', m[1]); })();
   const KEY = store('gymKey');
 
   // ---------- talking to the spreadsheet ----------
@@ -145,64 +237,155 @@
         const item = queue[0];
         const row = await api('logEntry', { entry: item.entry });
         queue.shift(); store('gymQueue', queue);
-        if (logged[item.entry.exercise] && logged[item.entry.exercise].qid === item.id) {
-          logged[item.entry.exercise] = Object.assign({}, item.entry, { row });
-          saveLogged();
-        }
+        const l = logged[item.entry.exercise];
+        if (l && l.qid === item.id) { l.row = row; delete l.qid; saveLogged(); }
       }
     } catch (e) {
-      if (e.server) { toast('Could not save a waiting entry: ' + e.message); }
+      if (e.server) toast('Could not save a waiting entry: ' + e.message);
     } finally {
       sending = false; showPending(); if (data) render();
     }
   }
   function showPending() {
-    const p = document.getElementById('pending');
+    const p = document.getElementById('pending'); if (!p) return;
     p.style.display = queue.length ? 'block' : 'none';
     p.textContent = queue.length ? `⏳ ${queue.length} waiting to send (no signal). They'll send automatically.` : '';
   }
 
   // ---------- state ----------
   let data = store('gymData');
-  let day = store('gymDay');
+  let view = store('gymView') || 'workout';
+  let day = null;              // chosen workout day (Push/Pull/Legs)
+  let progFilter = 'All';      // Progress tab filter
+  let detail = null;           // exercise open in Progress
+  let metric = 'weight';       // chart: weight or est. max
+  let openDays = {};           // History: expanded dates
   // What you logged today, so it survives closing the app.
-  let logged = (store('gymLogged') || {});
+  let logged = store('gymLogged') || {};
   if (logged._date !== todayIso()) logged = { _date: todayIso() };
   function saveLogged() { store('gymLogged', logged); }
+  function loggedEntries() { return Object.keys(logged).filter(k => k[0] !== '_').map(k => Object.assign({ exercise: k }, logged[k])); }
 
-  function exercisesForDay() { return data.exercises.filter(e => e.day === day); }
+  // Full history = spreadsheet rows + anything logged on this phone that the sheet copy doesn't have yet.
+  function allHistory() {
+    if (!data) return [];
+    const hist = (data.history || []).slice();
+    const rows = new Set(hist.map(h => h.row));
+    const undone = new Set(logged._undone || []);
+    const out = hist.filter(h => !undone.has(h.row));
+    loggedEntries().forEach(l => { if (!l.row || !rows.has(l.row)) out.push(Object.assign({ date: todayIso(), pending: !l.row }, l)); });
+    return out.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.row || 1e9) - (b.row || 1e9));
+  }
+  function exByName() { const m = {}; data.exercises.forEach(e => m[e.name] = e); return m; }
+  function daysList() { return [...new Set(data.exercises.map(e => e.day))]; }
 
-  // ---------- drawing ----------
-  function render() {
-    const days = [...new Set(data.exercises.map(e => e.day))];
-    if (!days.includes(day)) day = days[0];
-    document.getElementById('tabs').innerHTML = days.map(d =>
-      `<button class="tab ${d === day ? 'on' : ''}" data-day="${esc(d)}">${esc(d)}</button>`).join('');
-    const list = exercisesForDay();
-    document.getElementById('list').innerHTML = list.map((e, i) => card(e, i)).join('') ||
-      '<div class="msg">No exercises for this day yet. Add them on the Exercises sheet.</div>';
-    document.querySelectorAll('.card').forEach(updateHint);
+  // Marks each entry that set a new estimated max for its exercise.
+  function withRecords(hist) {
+    const best = {};
+    return hist.map(h => {
+      const v = est(h.weight, h.reps), prev = best[h.exercise];
+      const pr = prev !== undefined && v > prev + 0.05;
+      if (prev === undefined || v > prev) best[h.exercise] = v;
+      return Object.assign({}, h, { est: v, pr });
+    });
+  }
+
+  // Which day you trained longest ago (never-trained days first).
+  function lastTrainedByDay(hist) {
+    const ex = exByName(), last = {};
+    hist.forEach(h => { const d = ex[h.exercise] ? ex[h.exercise].day : null; if (d && (!last[d] || h.date > last[d])) last[d] = h.date; });
+    return last;
+  }
+  function suggestedDay() {
+    const hist = allHistory(), today = todayIso();
+    const todays = hist.filter(h => h.date === today), ex = exByName();
+    if (todays.length && ex[todays[todays.length - 1].exercise]) return ex[todays[todays.length - 1].exercise].day;
+    const last = lastTrainedByDay(hist);
+    let best = null;
+    daysList().forEach(d => { if (best === null || (last[d] || '') < (last[best] || '')) best = d; });
+    return best;
+  }
+
+  // Progression suggestion: add reps until REP_TOP, then add weight and drop to REP_RESET.
+  function suggestion(e) {
+    const l = e.last; if (!l || !l.reps) return null;
+    if (l.reps >= REP_TOP) return { weight: l.weight + WEIGHT_STEP, reps: REP_RESET, why: `you hit ${l.reps} reps last time` };
+    return { weight: l.weight, reps: l.reps + 1, why: 'one more rep than last time' };
+  }
+
+  // ---------- drawing: shared ----------
+  const ICONS = {
+    workout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>',
+    progress: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>',
+    history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+    stats: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-9"/></svg>'
+  };
+  const VIEWS = [['workout', 'Workout'], ['progress', 'Progress'], ['history', 'History'], ['stats', 'Stats']];
+
+  function renderNav() {
+    document.getElementById('nav').innerHTML = VIEWS.map(([k, label]) =>
+      `<button data-view="${k}" class="${k === view ? 'on' : ''}" aria-label="${label}">${ICONS[k]}${label}</button>`).join('');
+  }
+
+  function header(title, sub, extra) {
+    document.getElementById('header').innerHTML = `
+      <div class="head"><div><h1>${title}</h1><div class="sub">${sub || ''}</div></div>
+        <button class="icon-btn" data-act="refresh" aria-label="Reload from spreadsheet">↻</button></div>
+      <div class="pending" id="pending"></div>${extra || ''}`;
     showPending();
   }
 
-  function card(e, i) {
+  function render() {
+    renderNav();
+    document.getElementById('timer').style.display = (view === 'workout' || timer.end) ? 'flex' : 'none';
+    if (!data) return;
+    if (view === 'workout') renderWorkout();
+    else if (view === 'progress') renderProgress();
+    else if (view === 'history') renderHistory();
+    else renderStats();
+    setupCharts();
+  }
+
+  // ---------- Workout tab ----------
+  function renderWorkout() {
+    const days = daysList();
+    if (!days.includes(day)) day = suggestedDay() || days[0];
+    const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    header('Workout', today, `<div class="tabs">${days.map(d =>
+      `<button class="tab ${d === day ? 'on' : ''}" data-day="${esc(d)}">${esc(d)}</button>`).join('')}</div>`);
+
+    const sug = suggestedDay(), last = lastTrainedByDay(allHistory());
+    let banner = '';
+    if (sug && sug !== day && !loggedEntries().length) {
+      banner = `<div class="banner">💡 Suggested today: <b>${esc(sug)}</b> (${last[sug] ? 'last trained ' + niceDate(last[sug]) : 'not trained yet'})</div>`;
+    }
+    const list = data.exercises.filter(e => e.day === day);
+    document.getElementById('main').innerHTML = banner + (list.map((e, i) => workoutCard(e, i)).join('') ||
+      '<div class="msg">No exercises for this day yet. Add them on the Exercises sheet.</div>');
+    document.querySelectorAll('.card[data-i]').forEach(updateHint);
+  }
+
+  function workoutCard(e, i) {
     const l = e.last, done = logged[e.name];
     const head = `<div class="top"><div class="name">${esc(e.name)}</div><div class="muscle">${esc(e.muscle)}</div></div>`;
     if (done) {
       const waiting = !done.row;
       return `<div class="card ${waiting ? 'queued' : 'done'}" data-i="${i}">${head}
-        <div class="logged"><div class="check">${waiting ? '⏳' : '✓'} ${fmt(done.weight)} kg × ${done.reps} × ${done.sets}${waiting ? ' · waiting to send' : ''}</div>
+        <div class="logged"><div class="check">${waiting ? '⏳' : (done.pr ? '🏆' : '✓')} ${fmt(done.weight)} kg × ${done.reps} × ${done.sets}${waiting ? ' · waiting to send' : (done.pr ? ' · new record!' : '')}</div>
         <button class="link" data-act="undo">Undo</button></div></div>`;
     }
-    const lastTxt = l ? `Last (${niceDate(l.date, data.today || todayIso())}): <b>${fmt(l.weight)} kg × ${l.reps} reps × ${l.sets} sets</b>` +
+    const lastTxt = l ? `Last (${niceDate(l.date)}): <b>${fmt(l.weight)} kg × ${l.reps} reps × ${l.sets} sets</b>` +
       (l.notes ? ` · ${esc(l.notes)}` : '') : 'First time, no history yet';
-    const w = l ? l.weight : 0, r = l ? l.reps : 10, s = l ? l.sets : 3;
+    const s = suggestion(e);
+    const sugHtml = s ? `<div class="suggest"><span>💡 Try <b>${fmt(s.weight)} kg × ${s.reps}</b> (${s.why})</span>
+      <button data-act="apply" data-w="${s.weight}" data-r="${s.reps}">Use</button></div>` : '';
+    const w = l ? l.weight : 0, r = l ? l.reps : 10, st = l ? l.sets : 3;
     return `<div class="card" data-i="${i}">${head}
-      <div class="last">${lastTxt}</div>
+      <div class="last">${lastTxt}</div>${sugHtml}
       <div class="row">
         ${field('Kg', 'weight', w, WEIGHT_STEP, 'decimal')}
         ${field('Reps', 'reps', r, 1, 'numeric')}
-        ${field('Sets', 'sets', s, 1, 'numeric')}
+        ${field('Sets', 'sets', st, 1, 'numeric')}
       </div>
       <input class="note" data-k="notes" placeholder="Note (optional)" autocomplete="off">
       <div class="actions"><div class="hint"></div><button class="btn" data-act="log">Done</button></div>
@@ -222,50 +405,336 @@
     return { weight: v('weight'), reps: Math.round(v('reps')), sets: Math.round(v('sets')),
       notes: el.querySelector('input[data-k="notes"]').value.trim() };
   }
+  function cardExercise(el) { return data.exercises.filter(x => x.day === day)[+el.dataset.i]; }
+
+  function bestEst(name) {
+    let b = -1; allHistory().forEach(h => { if (h.exercise === name) b = Math.max(b, est(h.weight, h.reps)); }); return b;
+  }
 
   function updateHint(el) {
-    const e = exercisesForDay()[+el.dataset.i];
+    const e = cardExercise(el);
     const h = el.querySelector('.hint'); if (!h || !e || !e.last) return;
-    const c = readCard(el), now = est(c.weight, c.reps), before = est(e.last.weight, e.last.reps);
-    if (now > before + 0.05) { h.textContent = '↑ stronger than last time'; h.className = 'hint up'; }
+    const c = readCard(el), now = est(c.weight, c.reps), before = est(e.last.weight, e.last.reps), best = bestEst(e.name);
+    if (now > best + 0.05) { h.textContent = '🏆 would be a new record'; h.className = 'hint up'; }
+    else if (now > before + 0.05) { h.textContent = '↑ stronger than last time'; h.className = 'hint up'; }
     else if (now < before - 0.05) { h.textContent = 'Lighter than last time'; h.className = 'hint'; }
     else { h.textContent = 'Same as last time'; h.className = 'hint'; }
   }
 
+  // ---------- Progress tab ----------
+  function renderProgress() {
+    const hist = withRecords(allHistory());
+    if (detail) return renderDetail(hist);
+    const days = ['All', ...daysList()];
+    header('Progress', 'Your current weight for each exercise',
+      `<div class="chips">${days.map(d => `<button class="chip ${d === progFilter ? 'on' : ''}" data-filter="${esc(d)}">${esc(d)}</button>`).join('')}</div>`);
+
+    const list = data.exercises.filter(e => progFilter === 'All' || e.day === progFilter);
+    const done = [], notYet = [];
+    list.forEach(e => { const h = hist.filter(x => x.exercise === e.name); (h.length ? done : notYet).push([e, h]); });
+
+    let html = done.map(([e, h]) => {
+      const first = h[0], cur = h[h.length - 1], diff = cur.weight - first.weight;
+      const pct = first.weight > 0 ? Math.round(diff / first.weight * 100) : null;
+      const deltaTxt = h.length < 2 ? `${h.length} session` : (diff === 0 ? 'No change yet' : `${diff > 0 ? '+' : ''}${fmt(diff)} kg${pct !== null ? ` (${diff > 0 ? '+' : ''}${pct}%)` : ''}`);
+      return `<button class="prow" data-detail="${esc(e.name)}">
+        <div class="info"><div class="pname">${esc(e.name)}</div>
+          <div class="pmeta">${esc(e.muscle)} · ${niceDate(cur.date)}</div></div>
+        ${sparkline(h.map(x => x.weight))}
+        <div class="pval"><div class="big">${fmt(cur.weight)}<span class="unit"> kg</span></div>
+          <div class="delta ${diff > 0 ? 'up' : ''}">${deltaTxt}</div></div>
+      </button>`;
+    }).join('');
+    if (!done.length) html += '<div class="msg">No sessions logged yet for these exercises.</div>';
+    if (notYet.length) {
+      html += `<div class="section-title">Not logged yet</div>` + notYet.map(([e]) =>
+        `<div class="prow dim"><div class="info"><div class="pname">${esc(e.name)}</div><div class="pmeta">${esc(e.muscle)}</div></div></div>`).join('');
+    }
+    document.getElementById('main').innerHTML = html;
+  }
+
+  function renderDetail(hist) {
+    const e = exByName()[detail];
+    const h = hist.filter(x => x.exercise === detail);
+    header(esc(detail), e ? esc(e.day + ' · ' + e.muscle) : '');
+    document.querySelector('#header h1').style.fontSize = '19px';
+    let html = `<button class="back" data-act="back">‹ All exercises</button>`;
+    if (!h.length) { document.getElementById('main').innerHTML = html + '<div class="msg">No sessions logged yet.</div>'; return; }
+    const cur = h[h.length - 1], best = h.reduce((a, b) => b.weight > a.weight ? b : a), bestE = h.reduce((a, b) => b.est > a.est ? b : a);
+    html += `<div class="tiles">
+      ${tile('Current', fmt(cur.weight), 'kg', `${cur.reps} reps · ${niceDate(cur.date)}`)}
+      ${tile('Heaviest', fmt(best.weight), 'kg', shortDate(best.date))}
+      ${tile('Est. max (1 rep)', fmt(bestE.est), 'kg', 'from weight × reps')}
+      ${tile('Sessions', h.length, '', `since ${shortDate(h[0].date)}`)}
+    </div>
+    <div class="card">
+      <div class="seg"><button data-metric="weight" class="${metric === 'weight' ? 'on' : ''}">Weight</button>
+        <button data-metric="est" class="${metric === 'est' ? 'on' : ''}">Est. max</button></div>
+      ${lineChart(h, metric)}
+      ${h.length < 2 ? '<div class="sub" style="text-align:center">Log a few more sessions to see your trend.</div>' : ''}
+    </div>
+    <div class="section-title">All sessions</div>
+    <div class="card" style="padding:6px 12px"><table><thead><tr><th>Date</th><th class="num">Kg × reps × sets</th><th class="num">Est. max</th></tr></thead><tbody>
+      ${h.slice().reverse().map(x => `<tr><td>${x.pr ? '🏆 ' : ''}${shortDate(x.date)}</td>
+        <td class="num">${fmt(x.weight)} × ${x.reps} × ${x.sets}</td><td class="num">${fmt(x.est)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+    document.getElementById('main').innerHTML = html;
+  }
+
+  function tile(label, value, unit, note) {
+    return `<div class="tile"><div class="label">${label}</div><div class="value">${value}${unit ? `<small> ${unit}</small>` : ''}</div><div class="note2">${note || ''}</div></div>`;
+  }
+
+  // ---------- History tab ----------
+  function renderHistory() {
+    const hist = withRecords(allHistory()), ex = exByName();
+    header('History', 'Your past workouts');
+    const byDate = {};
+    hist.forEach(h => (byDate[h.date] = byDate[h.date] || []).push(h));
+    const dates = Object.keys(byDate).sort().reverse();
+    if (!dates.length) { document.getElementById('main').innerHTML = '<div class="msg">No workouts logged yet.</div>'; return; }
+    if (!Object.keys(openDays).length) openDays[dates[0]] = true;
+    document.getElementById('main').innerHTML = dates.map(d => {
+      const items = byDate[d];
+      const dayCount = {}; items.forEach(i => { const k = ex[i.exercise] ? ex[i.exercise].day : 'Other'; dayCount[k] = (dayCount[k] || 0) + 1; });
+      const kind = Object.keys(dayCount).sort((a, b) => dayCount[b] - dayCount[a]).join(' + ');
+      const vol = items.reduce((s, i) => s + volume(i), 0), prs = items.filter(i => i.pr).length;
+      return `<div class="card"><button class="hday" data-hday="${d}">
+        <div class="top"><div class="name">${longDate(d)} · ${esc(kind)}</div><div class="muscle">${openDays[d] ? '▾' : '▸'}</div></div>
+        <div class="sub">${items.length} exercise${items.length > 1 ? 's' : ''} · ${fmtBig(vol)} kg lifted${prs ? ` · 🏆 ${prs} record${prs > 1 ? 's' : ''}` : ''}</div></button>
+        ${openDays[d] ? `<div class="hlist">${items.map(i => `<div class="hitem"><span>${i.pr ? '🏆 ' : ''}${esc(i.exercise)}${i.notes ? ` <span class="sub">· ${esc(i.notes)}</span>` : ''}</span>
+          <span class="v">${fmt(i.weight)} kg × ${i.reps} × ${i.sets}</span></div>`).join('')}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  // ---------- Stats tab ----------
+  function renderStats() {
+    const hist = withRecords(allHistory()), today = todayIso();
+    header('Stats', 'How your training is going');
+    const dates = [...new Set(hist.map(h => h.date))].sort();
+    const thisWeek = weekStart(today), monthKey = today.slice(0, 7);
+    const weekCount = dates.filter(d => weekStart(d) === thisWeek).length;
+    const monthCount = dates.filter(d => d.slice(0, 7) === monthKey).length;
+    const prMonth = hist.filter(h => h.pr && h.date.slice(0, 7) === monthKey).length;
+
+    // Streak: weeks in a row (ending this week or last week) with at least one workout.
+    const weeks = new Set(dates.map(weekStart));
+    let streak = 0, w = dateOf(thisWeek);
+    if (!weeks.has(thisWeek)) w.setDate(w.getDate() - 7);
+    while (weeks.has(isoOf(w))) { streak++; w.setDate(w.getDate() - 7); }
+
+    // Volume per week, last 8 weeks.
+    const bars = [];
+    const start = dateOf(thisWeek); start.setDate(start.getDate() - 7 * 7);
+    for (let i = 0; i < 8; i++) {
+      const ws = isoOf(start);
+      const v = hist.filter(h => weekStart(h.date) === ws).reduce((s, h) => s + volume(h), 0);
+      bars.push({ label: shortDate(ws), value: v, ws });
+      start.setDate(start.getDate() + 7);
+    }
+
+    const last = lastTrainedByDay(hist);
+    let html = `<div class="tiles">
+      ${tile('This week', weekCount, weekCount === 1 ? 'workout' : 'workouts', '')}
+      ${tile('Week streak', streak, streak === 1 ? 'week' : 'weeks', 'in a row with a workout')}
+      ${tile('This month', monthCount, monthCount === 1 ? 'workout' : 'workouts', '')}
+      ${tile('Records this month', prMonth, '', 'new best est. max')}
+    </div>
+    <div class="section-title">Weight lifted per week</div>
+    <div class="card">${barChart(bars)}<div class="sub" style="text-align:center;margin-top:4px">kg × reps × sets, added up · tap a bar for details</div></div>
+    <div class="section-title">Last trained</div>
+    <div class="card" style="padding:6px 12px"><table><tbody>${daysList().map(d =>
+      `<tr><td>${esc(d)}</td><td class="num">${last[d] ? niceDate(last[d]) : 'not yet'}</td></tr>`).join('')}</tbody></table></div>
+    <div class="section-title">All time</div>
+    <div class="tiles">
+      ${tile('Workouts', dates.length, '', dates.length ? `since ${shortDate(dates[0])}` : '')}
+      ${tile('Total lifted', fmtBig(hist.reduce((s, h) => s + volume(h), 0)), 'kg', '')}
+    </div>`;
+    document.getElementById('main').innerHTML = html;
+  }
+
+  // ---------- charts (plain SVG, works offline) ----------
+  const charts = {}; let chartSeq = 0;
+
+  function niceTicks(min, max, count) {
+    if (min === max) { const pad = Math.max(1, Math.abs(min) * 0.1); min -= pad; max += pad; }
+    const raw = (max - min) / count, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw);
+    const lo = Math.floor(min / step) * step, hi = Math.ceil(max / step) * step, ticks = [];
+    for (let v = lo; v <= hi + step / 2; v += step) ticks.push(+v.toFixed(6));
+    return ticks;
+  }
+
+  function lineChart(h, which) {
+    const W = 340, H = 190, L = 38, R = 14, T = 14, B = 26;
+    const vals = h.map(x => which === 'est' ? x.est : x.weight);
+    const ticks = niceTicks(Math.min(...vals), Math.max(...vals), 3), y0 = ticks[0], y1 = ticks[ticks.length - 1];
+    const t = h.map(x => dateOf(x.date).getTime()), t0 = Math.min(...t), t1 = Math.max(...t);
+    // Several entries on the same day are spread out slightly so they don't overlap.
+    const px = h.map((x, i) => t1 === t0 ? (h.length === 1 ? (L + W - R) / 2 : L + (W - L - R) * i / (h.length - 1)) : L + (W - L - R) * (t[i] - t0) / (t1 - t0));
+    const py = vals.map(v => T + (H - T - B) * (1 - (v - y0) / (y1 - y0)));
+    const id = 'c' + (++chartSeq);
+    charts[id] = { pts: h.map((x, i) => ({ x: px[i], y: py[i], title: `${fmt(vals[i])} kg`, sub: `${shortDate(x.date)} · ${fmt(x.weight)} kg × ${x.reps} × ${x.sets}` })), W, H, T, B };
+    const grid = ticks.map(v => { const y = T + (H - T - B) * (1 - (v - y0) / (y1 - y0));
+      return `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="var(--grid)" stroke-width="1"/>
+        <text x="${L - 6}" y="${y + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(v)}</text>`; }).join('');
+    const xl = [0, h.length - 1].filter((v, i, a) => a.indexOf(v) === i).map(i =>
+      `<text x="${px[i]}" y="${H - 6}" text-anchor="${h.length === 1 ? 'middle' : (i === 0 ? 'start' : 'end')}" font-size="11" fill="var(--muted)">${shortDate(h[i].date)}</text>`).join('');
+    const path = px.map((x, i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${py[i].toFixed(1)}`).join('');
+    const dots = px.map((x, i) => `<circle cx="${x}" cy="${py[i]}" r="4" fill="var(--accent)" stroke="var(--card)" stroke-width="2"/>`).join('');
+    const lastI = h.length - 1;
+    const lastLabel = `<text x="${Math.min(px[lastI], W - R)}" y="${py[lastI] - 10}" text-anchor="end" font-size="12" font-weight="700" fill="var(--text)">${fmt(vals[lastI])}</text>`;
+    return `<div class="chart-wrap" data-chart="${id}"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${which === 'est' ? 'Estimated max' : 'Weight'} over time">
+      ${grid}${xl}<path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <line class="guide" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/>
+      ${dots}<circle class="hot" r="6" fill="var(--accent)" stroke="var(--text)" stroke-width="2" visibility="hidden"/>${lastLabel}
+    </svg><div class="tip"></div></div>`;
+  }
+
+  function barChart(bars) {
+    const W = 340, H = 170, L = 8, R = 8, T = 18, B = 24, gap = 6;
+    const max = Math.max(1, ...bars.map(b => b.value));
+    const bw = (W - L - R - gap * (bars.length - 1)) / bars.length;
+    const id = 'c' + (++chartSeq);
+    const pts = [];
+    const marks = bars.map((b, i) => {
+      const x = L + i * (bw + gap), h = b.value ? Math.max(3, (H - T - B) * b.value / max) : 0, y = H - B - h;
+      pts.push({ x: x + bw / 2, y, title: `${fmtBig(b.value)} kg`, sub: `Week of ${b.label}` });
+      const r = Math.min(4, h, bw / 2);
+      const bar = h ? `<path d="M${x},${H - B} V${y + r} Q${x},${y} ${x + r},${y} H${x + bw - r} Q${x + bw},${y} ${x + bw},${y + r} V${H - B} Z" fill="var(--accent)"/>` : '';
+      const lbl = (i === 0 || i === bars.length - 1 || i === 4) ? `<text x="${x + bw / 2}" y="${H - 7}" text-anchor="middle" font-size="11" fill="var(--muted)">${i === bars.length - 1 ? 'This wk' : b.label}</text>` : '';
+      return bar + lbl;
+    }).join('');
+    charts[id] = { pts, W, H, T, B, bars: true };
+    return `<div class="chart-wrap" data-chart="${id}"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight lifted per week">
+      <line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" stroke="var(--line)" stroke-width="1"/>${marks}
+    </svg><div class="tip"></div></div>`;
+  }
+
+  function sparkline(vals) {
+    const W = 64, H = 26;
+    if (vals.length < 2) return `<svg class="spark" width="${W}" height="${H}"></svg>`;
+    const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+    const pts = vals.map((v, i) => `${(2 + (W - 4) * i / (vals.length - 1)).toFixed(1)},${(H - 3 - (H - 6) * (hi === lo ? 0.5 : (v - lo) / span)).toFixed(1)}`).join(' ');
+    return `<svg class="spark" width="${W}" height="${H}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  }
+
+  // Tap or drag on a chart to see the nearest point.
+  function setupCharts() {
+    document.querySelectorAll('.chart-wrap').forEach(wrap => {
+      const c = charts[wrap.dataset.chart]; if (!c) return;
+      const svg = wrap.querySelector('svg'), tip = wrap.querySelector('.tip');
+      const guide = svg.querySelector('.guide'), hot = svg.querySelector('.hot');
+      function show(ev) {
+        const r = svg.getBoundingClientRect(), sx = (ev.clientX - r.left) * c.W / r.width;
+        let best = c.pts[0]; c.pts.forEach(p => { if (Math.abs(p.x - sx) < Math.abs(best.x - sx)) best = p; });
+        if (!best) return;
+        tip.innerHTML = `<b>${best.title}</b><span>${best.sub}</span>`;
+        tip.style.display = 'block';
+        const left = Math.max(70, Math.min(r.width - 70, best.x * r.width / c.W));
+        tip.style.left = left + 'px';
+        tip.style.top = Math.max(-8, best.y * r.height / c.H - 58) + 'px';
+        if (guide) { guide.setAttribute('x1', best.x); guide.setAttribute('x2', best.x); guide.setAttribute('visibility', 'visible'); }
+        if (hot) { hot.setAttribute('cx', best.x); hot.setAttribute('cy', best.y); hot.setAttribute('visibility', 'visible'); }
+      }
+      function hide() { tip.style.display = 'none'; if (guide) guide.setAttribute('visibility', 'hidden'); if (hot) hot.setAttribute('visibility', 'hidden'); }
+      wrap.addEventListener('pointerdown', show); wrap.addEventListener('pointermove', show);
+      wrap.addEventListener('pointerleave', hide);
+    });
+  }
+
+  // ---------- rest timer ----------
+  const timer = { end: 0, t: null, secs: store('gymRest') || 90 };
+  let audioCtx = null;
+  function beep() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.25, 0.5].forEach(d => {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination);
+        g.gain.setValueAtTime(0.25, audioCtx.currentTime + d); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + d + 0.2);
+        o.start(audioCtx.currentTime + d); o.stop(audioCtx.currentTime + d + 0.2);
+      });
+    } catch (e) {}
+    try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {}
+  }
+  function startTimer(secs) {
+    timer.secs = secs; store('gymRest', secs);
+    // Unlock sound on iPhone: it must start from a tap.
+    try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch (e) {}
+    timer.end = Date.now() + secs * 1000;
+    clearInterval(timer.t); timer.t = setInterval(tickTimer, 250); tickTimer();
+  }
+  function stopTimer() { clearInterval(timer.t); timer.end = 0; drawTimer(); render(); }
+  function tickTimer() {
+    const left = Math.ceil((timer.end - Date.now()) / 1000);
+    if (left <= 0) {
+      clearInterval(timer.t); timer.end = 0; beep();
+      const b = document.getElementById('timerBtn'); b.textContent = '✓ Rest over'; b.className = 'timer-btn ring';
+      setTimeout(() => { if (!timer.end) { drawTimer(); render(); } }, 4000);
+      return;
+    }
+    const b = document.getElementById('timerBtn');
+    b.textContent = `⏱ ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`; b.className = 'timer-btn running';
+  }
+  function drawTimer() { const b = document.getElementById('timerBtn'); b.textContent = '⏱ Rest'; b.className = 'timer-btn'; }
+
   // ---------- taps ----------
   document.addEventListener('click', async ev => {
-    const b = ev.target.closest('button'); if (!b) return;
-    if (b.id === 'refresh') { load(true); return; }
-    if (b.dataset.day) { day = b.dataset.day; store('gymDay', day); render(); window.scrollTo(0, 0); return; }
+    const b = ev.target.closest('button');
+    const menu = document.getElementById('timerMenu');
+    if (!b || !b.closest('.timer')) menu.classList.remove('open');
+    if (!b) return;
 
-    const el = b.closest('.card'); if (!el || !data) return;
-    const e = exercisesForDay()[+el.dataset.i];
+    if (b.id === 'timerBtn') {
+      if (timer.end) stopTimer(); else menu.classList.toggle('open');
+      return;
+    }
+    if (b.dataset.rest) { menu.classList.remove('open'); startTimer(+b.dataset.rest); return; }
+    if (b.dataset.view) { view = b.dataset.view; store('gymView', view); if (view !== 'progress') detail = null; render(); window.scrollTo(0, 0); return; }
+    if (b.dataset.act === 'refresh') { load(true); return; }
+    if (b.dataset.day) { day = b.dataset.day; render(); window.scrollTo(0, 0); return; }
+    if (b.dataset.filter) { progFilter = b.dataset.filter; render(); return; }
+    if (b.dataset.detail) { detail = b.dataset.detail; render(); window.scrollTo(0, 0); return; }
+    if (b.dataset.act === 'back') { detail = null; render(); window.scrollTo(0, 0); return; }
+    if (b.dataset.metric) { metric = b.dataset.metric; render(); return; }
+    if (b.dataset.hday) { openDays[b.dataset.hday] = !openDays[b.dataset.hday]; render(); return; }
+
+    const el = b.closest('.card[data-i]'); if (!el || !data) return;
+    const e = cardExercise(el);
 
     if (b.dataset.step) {
       const inp = el.querySelector(`input[data-k="${b.dataset.k}"]`);
       inp.value = fmt(Math.max(0, (parseFloat(inp.value) || 0) + parseFloat(b.dataset.step)));
       updateHint(el); return;
     }
-
+    if (b.dataset.act === 'apply') {
+      el.querySelector('input[data-k="weight"]').value = fmt(+b.dataset.w);
+      el.querySelector('input[data-k="reps"]').value = b.dataset.r;
+      updateHint(el); return;
+    }
     if (b.dataset.act === 'log') {
       const c = readCard(el);
       if (c.reps <= 0 || c.sets <= 0) { toast('Reps and sets need to be above 0.'); return; }
+      const prevBest = bestEst(e.name);
+      const pr = prevBest >= 0 && est(c.weight, c.reps) > prevBest + 0.05;
       const entry = Object.assign({ exercise: e.name }, c);
       b.disabled = true; b.textContent = 'Saving…';
       try {
         const row = await api('logEntry', { entry });
-        logged[e.name] = Object.assign({}, c, { row });
+        logged[e.name] = Object.assign({}, c, { row, pr });
       } catch (err) {
         if (err.server) { b.disabled = false; b.textContent = 'Done'; toast('Could not save: ' + err.message); return; }
         // No signal: keep it on the phone and send later.
         const id = Date.now() + '-' + Math.random().toString(36).slice(2, 7);
         queue.push({ id, entry }); store('gymQueue', queue);
-        logged[e.name] = Object.assign({}, c, { qid: id });
+        logged[e.name] = Object.assign({}, c, { qid: id, pr });
       }
       saveLogged(); render();
+      if (pr) toast(`🏆 New record on ${e.name}!`, true);
       return;
     }
-
     if (b.dataset.act === 'undo') {
       const d = logged[e.name];
       b.disabled = true;
@@ -274,35 +743,43 @@
       } else {
         try { await api('undoEntry', { row: d.row, exercise: e.name }); }
         catch (err) { b.disabled = false; toast('Could not undo: ' + (err.server ? err.message : 'no signal, try again')); return; }
+        logged._undone = (logged._undone || []).concat(d.row);
       }
       delete logged[e.name]; saveLogged(); render();
     }
   });
-  document.addEventListener('input', ev => { const el = ev.target.closest('.card'); if (el) updateHint(el); });
+  document.addEventListener('input', ev => { const el = ev.target.closest('.card[data-i]'); if (el) updateHint(el); });
 
   // ---------- start ----------
-  function showDate() {
-    document.getElementById('sub').textContent =
-      new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
-  }
   async function load(manual) {
+    renderNav();
     if (!KEY) {
-      document.getElementById('list').innerHTML = '<div class="msg">This phone isn\'t set up yet.<br>Open the setup link you were given, then add the app to your home screen from that page.</div>';
-      document.getElementById('sub').textContent = '';
+      header('Gym Logger', '');
+      document.getElementById('main').innerHTML = '<div class="msg">This phone isn\'t set up yet.<br>Open the setup link you were given, then add the app to your home screen from that page.</div>';
       return;
     }
-    showDate();
     if (data) render();
     try {
-      data = await api('getData'); store('gymData', data); render();
+      data = await api('getData');
+      // Rows the sheet now has (or no longer has) replace what this phone remembered.
+      logged._undone = [];
+      saveLogged(); store('gymData', data); render();
+      if (manual) toast('Up to date', true);
     } catch (err) {
-      if (!data) document.getElementById('list').innerHTML = '<div class="msg">Could not load your exercises.<br>' + esc(err.message || err) + '<br><br>Check your signal and tap ↻.</div>';
-      else if (manual) toast(err.server ? err.message : 'No signal. Showing saved exercises.');
+      if (!data) {
+        header('Gym Logger', '');
+        document.getElementById('main').innerHTML = '<div class="msg">Could not load your exercises.<br>' + esc(err.message || err) + '<br><br>Check your signal and tap ↻.</div>';
+      } else if (manual) toast(err.server ? err.message : 'No signal. Showing saved data.');
     }
     flushQueue();
   }
   window.addEventListener('online', flushQueue);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) { flushQueue(); if (logged._date !== todayIso()) { logged = { _date: todayIso() }; saveLogged(); load(); } } });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    if (timer.end) tickTimer();
+    flushQueue();
+    if (logged._date !== todayIso()) { logged = { _date: todayIso() }; saveLogged(); load(); }
+  });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   load();
 </script>
